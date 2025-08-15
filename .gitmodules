@@ -1,0 +1,6 @@
+[submodule "submodules/x402"]
+	path = submodules/x402
+	url = https://github.com/coinbase/x402.git
+[submodule "submodules/cdp-sdk-python"]
+	path = submodules/cdp-sdk-python
+	url = https://github.com/coinbase/cdp-sdk-python.git
