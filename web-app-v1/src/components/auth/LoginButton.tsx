@@ -1,29 +1,35 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { usePrivy } from '@privy-io/react-auth';
+import { useUserData } from './DataProvider';
 import LoginModal from './LoginModal';
 import ChannelConnectionModal from './ChannelConnectionModal';
-import { clearUserData } from '@/lib/auth/user-service';
+import { 
+  LogIn, 
+  Sparkles, 
+  Zap, 
+  Shield,
+  ArrowRight,
+  Crown
+} from 'lucide-react';
 
-interface LoginButtonProps {
-  className?: string;
-  children?: React.ReactNode;
-}
-
-// Modular login button that can be dropped anywhere
-export default function LoginButton({ className, children }: LoginButtonProps) {
-  const [showModal, setShowModal] = useState(false);
+export default function LoginButton() {
+  const { authenticated, user, ready } = usePrivy();
+  const { userChannels, hasChannelData } = useUserData();
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showChannelModal, setShowChannelModal] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [loginFlowComplete, setLoginFlowComplete] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isClearingData, setIsClearingData] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { authenticated, user, logout, ready } = usePrivy();
+
+  // Handle client-side mounting
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Check if user has already completed setup
-  const hasCompletedSetup = useCallback(() => {
+  const hasCompletedSetup = () => {
     try {
       const connectedChannels = localStorage.getItem('connected_channels');
       const connectionTimestamp = localStorage.getItem('channel_connection_timestamp');
@@ -50,267 +56,198 @@ export default function LoginButton({ className, children }: LoginButtonProps) {
       console.warn('Error checking setup completion:', error);
       return false;
     }
-  }, []);
-
-  // Handle client-side mounting
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Track login flow progress
-  useEffect(() => {
-    if (mounted && ready) {
-      console.log('LoginButton auth state:', { 
-        authenticated, 
-        user: !!user, 
-        ready, 
-        isClearingData, 
-        isLoggingIn,
-        isLoggingOut,
-        showModal,
-        showChannelModal,
-        loginFlowComplete,
-        authMethod: user?.linkedAccounts?.[0]?.type || 'none'
-      });
-      
-      // If we're logging in and authentication succeeds, keep loading until flow completes
-      if (isLoggingIn && authenticated && user) {
-        // Authentication successful, but keep loading until channel flow completes
-        console.log('🔄 Authentication successful, waiting for channel flow...', {
-          authMethod: user.linkedAccounts?.[0]?.type,
-          email: user.email?.address,
-          wallet: user.wallet?.address
-        });
-      }
-    }
-  }, [authenticated, user, ready, mounted, isClearingData, isLoggingIn, showModal, showChannelModal, loginFlowComplete]);
-
-  // Detect when Privy authentication completes during login flow
-  useEffect(() => {
-    if (authenticated && user && ready && isLoggingIn && !showChannelModal) {
-      // Check if user has already completed setup
-      if (hasCompletedSetup()) {
-        console.log('🎯 User already completed setup during login, marking as complete');
-        setShowModal(false);
-        setLoginFlowComplete(true);
-        setIsLoggingIn(false);
-        return;
-      }
-      
-      console.log('✅ Privy authentication successful during login - showing channel modal');
-      setShowModal(false); // Close login modal
-      setShowChannelModal(true); // Open channel modal
-    }
-  }, [authenticated, user, ready, isLoggingIn, showChannelModal, hasCompletedSetup]);
+  };
 
   // Detect authentication on page load/redirect (Google OAuth, etc.)
   useEffect(() => {
-    if (authenticated && user && ready && !loginFlowComplete && !isLoggingIn && !showChannelModal && !showModal && mounted && !isLoggingOut) {
-      // Check if user has already completed setup
-      if (hasCompletedSetup()) {
-        console.log('🎯 User already completed setup, marking as complete');
-        setLoginFlowComplete(true);
+    if (authenticated && user && ready && mounted && !showChannelModal && !showLoginModal) {
+      // Check if user already has channel data (complete setup)
+      if (hasChannelData) {
+        console.log('🎯 User already has channels, setup complete');
         return;
       }
       
-      // Small delay to ensure Privy is fully initialized and not during logout
+      // Check localStorage for recent setup completion
+      if (hasCompletedSetup()) {
+        console.log('🎯 User already completed setup recently, no need for channel modal');
+        return;
+      }
+      
+      // Small delay to ensure Privy is fully initialized
       const timer = setTimeout(() => {
-        console.log('✅ User authenticated on page load/redirect - showing channel modal', {
+        console.log('✅ User authenticated but missing channels - showing channel modal', {
           authMethod: user.linkedAccounts?.[0]?.type,
           email: user.email?.address,
-          wallet: user.wallet?.address
+          wallet: user.wallet?.address,
+          channelCount: userChannels.length
         });
-        setIsLoggingIn(true); // Set loading state
         setShowChannelModal(true); // Open channel modal directly
-      }, 100);
+      }, 500);
       
       return () => clearTimeout(timer);
     }
-  }, [authenticated, user, ready, loginFlowComplete, isLoggingIn, showChannelModal, showModal, mounted, isLoggingOut, hasCompletedSetup]);
+  }, [authenticated, user, ready, mounted, showChannelModal, showLoginModal, hasChannelData]);
 
-  // Reset loading state when login flow completes
-  useEffect(() => {
-    if (loginFlowComplete && isLoggingIn) {
-      setIsLoggingIn(false);
-      console.log('✅ Login flow completed!');
-    }
-  }, [loginFlowComplete, isLoggingIn]);
+  // Handle successful login - show channel connection modal
+  const handleLoginSuccess = () => {
+    setShowLoginModal(false);
+    setShowChannelModal(true);
+  };
 
-  // Show loading state until Privy is ready
-  if (!mounted || !ready) {
+  // Handle channel connection completion
+  const handleChannelConnectionComplete = () => {
+    console.log('✅ Channel connection completed - refreshing site');
+    // Small delay to let any final API calls complete, then refresh
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+  };
+
+  // Handle channel modal close (X button)
+  const handleChannelModalClose = () => {
+    console.log('❌ Channel modal closed - refreshing site');
+    // Small delay for smooth UX, then refresh
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+  };
+
+  if (!ready || !mounted) {
     return (
-      <div className={className || "bg-gray-300 text-gray-500 px-4 py-2 rounded-lg font-medium"}>
-        Loading...
-      </div>
+      <motion.div
+        animate={{ opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 1.5, repeat: Infinity }}
+        className="w-24 h-10 bg-gray-100 rounded-xl"
+      />
     );
   }
 
-  if (authenticated && loginFlowComplete) {
-    return (
-      <div className={`flex items-center gap-3 ${className || ''}`}>
-        <div className="text-right">
-          <div className="text-sm font-medium text-gray-900">
-            {user?.email?.address || user?.wallet?.address?.slice(0, 6) + '...' + user?.wallet?.address?.slice(-4) || 'User'}
-          </div>
-          <div className="text-xs text-green-600 flex items-center gap-1">
-            <span className="animate-pulse">✨</span>
-            <span>Premium Access</span>
-          </div>
-        </div>
-        <button 
-          onClick={async () => {
-            console.log('🚪 Logging out - clearing all states and localStorage');
-            setIsLoggingOut(true); // Prevent channel modal from opening during logout
-            setLoginFlowComplete(false);
-            setIsLoggingIn(false);
-            setIsClearingData(false);
-            setShowModal(false);
-            setShowChannelModal(false);
-            
-            // Clear all stored user and channel data
-            clearUserData();
-            
-            try {
-              await logout();
-            } catch (error) {
-              console.warn('Logout error:', error);
-            }
-            
-            // Reset logout state after logout completes
-            setTimeout(() => {
-              setIsLoggingOut(false);
-            }, 500);
-          }}
-          className="text-sm text-gray-500 hover:text-gray-700 px-2 py-1 rounded"
-        >
-          Logout
-        </button>
-      </div>
-    );
+  // Only hide login button if user has BOTH Privy auth AND channel data
+  if (authenticated && user && hasChannelData) {
+    return null; // Don't show login button if fully authenticated
   }
-
-  // Clear any cached data for fresh login (async)
-  const clearCachedData = async () => {
-    return new Promise<void>((resolve) => {
-      try {
-        console.log('🧹 Starting data cleanup...');
-        
-        // Clear localStorage items that might contain user/channel data
-        const keysToRemove = [
-          'privy:token',
-          'privy:refresh_token', 
-          'user_channels',
-          'channel_data',
-          'user_profile'
-        ];
-        
-        keysToRemove.forEach(key => {
-          if (localStorage.getItem(key)) {
-            localStorage.removeItem(key);
-            console.log(`🗑️ Cleared localStorage: ${key}`);
-          }
-        });
-        
-        // Clear sessionStorage as well
-        const sessionKeys = ['temp_user_data', 'channel_search_results'];
-        sessionKeys.forEach(key => {
-          if (sessionStorage.getItem(key)) {
-            sessionStorage.removeItem(key);
-            console.log(`🗑️ Cleared sessionStorage: ${key}`);
-          }
-        });
-        
-        // Add a small delay to ensure cleanup is complete
-        setTimeout(() => {
-          console.log('✅ Data cleanup completed');
-          resolve();
-        }, 100);
-        
-      } catch (error) {
-        console.warn('Failed to clear some cached data:', error);
-        resolve(); // Still resolve to continue the flow
-      }
-    });
-  };
-
-  // Handle login button click - clear data then start login
-  const handleLoginClick = async () => {
-    console.log('🚀 Starting fresh login process...');
-    
-    // Reset component states first
-    setLoginFlowComplete(false);
-    setShowChannelModal(false);
-    
-    // Show clearing state
-    setIsClearingData(true);
-    
-    // Clear any cached data first (await completion)
-    await clearCachedData();
-    
-    // Now show loading state and start login
-    console.log('🔄 Data cleared, starting login flow...');
-    setIsClearingData(false);
-    setIsLoggingIn(true);
-    setShowModal(true);
-  };
-
-  // Handle channel modal completion
-  const handleChannelModalComplete = () => {
-    console.log('✅ Channel connection completed');
-    setShowChannelModal(false);
-    setLoginFlowComplete(true);
-  };
-
-  // Handle channel modal close (user clicked X button - complete logout)
-  const handleChannelModalClose = async () => {
-    console.log('❌ Channel modal closed by user - complete logout performed');
-    
-    // Reset all login button states to initial state
-    setShowChannelModal(false);
-    setShowModal(false);
-    setIsLoggingIn(false);
-    setIsClearingData(false);
-    setLoginFlowComplete(false);
-    
-    // Note: ChannelConnectionModal handles Privy logout and data clearing
-    // User is now completely logged out and back to initial state
-  };
 
   return (
     <>
-      <button 
-        onClick={handleLoginClick}
-        disabled={isClearingData || isLoggingIn}
-        className={`${className || "bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"} ${(isClearingData || isLoggingIn) ? 'opacity-75' : ''}`}
+      <motion.button
+        whileHover={{ scale: 1.02, y: -1 }}
+        whileTap={{ scale: 0.98 }}
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
+        onClick={() => setShowLoginModal(true)}
+        className="relative group overflow-hidden"
       >
-        {isClearingData ? (
-          <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            <span>Clearing data...</span>
-          </div>
-        ) : isLoggingIn ? (
-          <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            <span>Logging in...</span>
-          </div>
-        ) : (
-          children || "Login for Premium Features"
+        {/* Animated Background */}
+        <motion.div
+          animate={{
+            background: isHovered 
+              ? 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)'
+              : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%)'
+          }}
+          transition={{ duration: 0.3 }}
+          className="absolute inset-0 rounded-xl"
+        />
+        
+        {/* Shimmer Effect */}
+        <motion.div
+          animate={{ x: isHovered ? ['-100%', '100%'] : '-100%' }}
+          transition={{ 
+            duration: isHovered ? 1.5 : 0,
+            ease: "easeInOut",
+            repeat: isHovered ? Infinity : 0,
+            repeatDelay: 1
+          }}
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
+        />
+
+        {/* Button Content */}
+        <div className="relative px-6 py-2.5 flex items-center space-x-2 text-white">
+          <motion.div
+            animate={{ rotate: isHovered ? 360 : 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <LogIn className="w-4 h-4" />
+          </motion.div>
+          
+          <span className="font-semibold text-sm">Sign In</span>
+          
+          <motion.div
+            animate={{ x: isHovered ? 3 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ArrowRight className="w-4 h-4" />
+          </motion.div>
+        </div>
+
+        {/* Glow Effect */}
+        <motion.div
+          animate={{
+            boxShadow: isHovered 
+              ? '0 0 30px rgba(139, 92, 246, 0.6), 0 0 60px rgba(236, 72, 153, 0.3)'
+              : '0 4px 15px rgba(79, 70, 229, 0.3)'
+          }}
+          transition={{ duration: 0.3 }}
+          className="absolute inset-0 rounded-xl -z-10"
+        />
+      </motion.button>
+
+      {/* Premium Features Tooltip */}
+      <AnimatePresence>
+        {isHovered && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            className="absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 z-50"
+          >
+            <div className="text-center mb-3">
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <Crown className="w-5 h-5 text-yellow-500" />
+                <h3 className="font-bold text-gray-900">Unlock Premium Features</h3>
+              </div>
+              <p className="text-sm text-gray-600">Join thousands of creators and unlock your potential</p>
+            </div>
+
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center space-x-3 text-sm">
+                <div className="w-2 h-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"></div>
+                <span className="text-gray-700">AI-powered insights & analytics</span>
+              </div>
+              <div className="flex items-center space-x-3 text-sm">
+                <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                <span className="text-gray-700">Instant USDC payments</span>
+              </div>
+              <div className="flex items-center space-x-3 text-sm">
+                <div className="w-2 h-2 bg-gradient-to-r from-pink-500 to-red-500 rounded-full"></div>
+                <span className="text-gray-700">Premium content access</span>
+              </div>
+              <div className="flex items-center space-x-3 text-sm">
+                <div className="w-2 h-2 bg-gradient-to-r from-green-500 to-teal-500 rounded-full"></div>
+                <span className="text-gray-700">Advanced channel management</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
+              <Shield className="w-3 h-3" />
+              <span>Secure • Fast • Decentralized</span>
+            </div>
+          </motion.div>
         )}
-      </button>
-      
+      </AnimatePresence>
+
+      {/* Login Modal */}
       <LoginModal 
-        isOpen={showModal} 
-        onClose={() => {
-          setShowModal(false);
-          setIsLoggingIn(false);
-        }} 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
-      
-      {/* Channel Connection Modal - now at LoginButton level */}
+
+      {/* Channel Connection Modal */}
       <ChannelConnectionModal
         isOpen={showChannelModal}
         onClose={handleChannelModalClose}
-        onComplete={handleChannelModalComplete}
+        onComplete={handleChannelConnectionComplete}
       />
     </>
   );

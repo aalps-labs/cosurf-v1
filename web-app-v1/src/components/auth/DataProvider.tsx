@@ -18,6 +18,7 @@ interface DataContextType {
   userChannels: Channel[];
   isDataReady: boolean;
   refreshUserChannels: () => void;
+  hasChannelData: boolean;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -90,8 +91,10 @@ export default function DataProvider({ children }: DataProviderProps) {
     );
   }
 
+  const hasChannelData = userChannels.length > 0;
+
   return (
-    <DataContext.Provider value={{ userChannels, isDataReady, refreshUserChannels }}>
+    <DataContext.Provider value={{ userChannels, isDataReady, refreshUserChannels, hasChannelData }}>
       {children}
     </DataContext.Provider>
   );

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { clearUserData } from '@/lib/auth/user-service';
+import { createPortal } from 'react-dom';
 
 interface Channel {
   id: string;
@@ -34,6 +35,12 @@ type FlowStep = 'creating_user' | 'checking_privy_channels' | 'email_input' | 's
 export default function ChannelConnectionModal({ isOpen, onClose, onComplete }: ChannelConnectionModalProps) {
   const { user, logout } = usePrivy();
   const [currentStep, setCurrentStep] = useState<FlowStep>('creating_user');
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure client-side only rendering
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
 
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -509,10 +516,10 @@ export default function ChannelConnectionModal({ isOpen, onClose, onComplete }: 
 
 
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  const modalContent = (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 relative">
@@ -877,4 +884,6 @@ export default function ChannelConnectionModal({ isOpen, onClose, onComplete }: 
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
