@@ -13,6 +13,8 @@ interface Channel {
   followers_count?: number;
   rep_score?: number;
   user_id: string;
+  is_following?: boolean;
+  is_muted?: boolean;
 }
 
 interface ChannelSearchResponse {
@@ -36,50 +38,135 @@ export default function ChannelDiscovery() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [followingStates, setFollowingStates] = useState<Record<string, boolean>>({});
+
+  const [userChannels, setUserChannels] = useState<Channel[]>([]);
+  const [followingChannels, setFollowingChannels] = useState<Set<string>>(new Set());
+  const [followingInProgress, setFollowingInProgress] = useState<Set<string>>(new Set());
   
   const CHANNELS_PER_PAGE = 12;
 
-  // Fetch all channels once on component mount
-  const fetchAllChannels = useCallback(async () => {
+  // Load user's connected channels from localStorage (no API call needed)
+  const loadUserChannels = useCallback(() => {
+    try {
+      const connectedChannels = localStorage.getItem('connected_channels');
+      if (connectedChannels) {
+        const channels: Channel[] = JSON.parse(connectedChannels);
+        setUserChannels(channels);
+        console.log('📊 Loaded user channels from localStorage:', channels.length);
+        return channels;
+      }
+    } catch (error) {
+      console.warn('Failed to load user channels from localStorage:', error);
+    }
+    return [];
+  }, []);
+
+  // Fetch channels and following status (following the same pattern as the provided page.tsx)
+  const fetchChannelsAndFollowStatus = useCallback(async () => {
+    if (userChannels.length === 0) {
+      console.log('⏳ No user channels loaded yet, skipping fetch');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      // Fetch a large number of channels to get all available channels
+      console.log('🚀 Starting channel fetch...');
+      
+      // API Call 1: Fetch all channels (same as the provided code)
       const params = new URLSearchParams({
-        size: '100', // Get a large number to fetch all channels
+        size: '100',
         is_active: 'true',
         sort_by: 'followers_count',
         sort_order: 'desc'
       });
 
-      const apiUrl = buildApiUrl(`/api/v1/channels?${params.toString()}`);
-      const response = await makeApiRequest(apiUrl, {
+      const channelsUrl = buildApiUrl(`/api/v1/channels?${params.toString()}`);
+      const channelsResponse = await makeApiRequest(channelsUrl, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch channels: ${response.status}`);
+      if (!channelsResponse.ok) {
+        throw new Error(`Failed to fetch channels: ${channelsResponse.status}`);
       }
 
-      const data: ChannelSearchResponse = await response.json();
+      const channelsData: ChannelSearchResponse = await channelsResponse.json();
       
-      setAllChannels(data.channels || []);
-      setFilteredChannels(data.channels || []);
+      // Filter out user's own channels (same as provided code)
+      const userChannelIds = new Set(userChannels.map(channel => channel.id));
+      const otherChannels = (channelsData.channels || []).filter(channel => 
+        !userChannelIds.has(channel.id)
+      );
+
+      // Get follow status for each channel (following the exact pattern from provided code)
+      const followerChannel = userChannels[0]; // Use first user channel as follower
+      const channelsWithFollowStatus: Channel[] = await Promise.all(
+        otherChannels.slice(0, 20).map(async (channel) => {
+          let followStatus = { is_following: false, is_muted: false };
+          
+          if (followerChannel) {
+            try {
+              // Make individual follow status check (same as provided code)
+              const response = await makeApiRequest(
+                buildApiUrl(`/api/v1/channels/${channel.id}/follow-status?follower_id=${followerChannel.id}`),
+                {
+                  method: 'GET',
+                  headers: { 'Content-Type': 'application/json' }
+                }
+              );
+              
+              if (response.ok) {
+                const status = await response.json();
+                followStatus = {
+                  is_following: status.is_following,
+                  is_muted: status.is_muted
+                };
+              }
+            } catch (error) {
+              // If follow status check fails, default to not following (same as provided code)
+              console.warn(`Failed to get follow status for channel ${channel.id}:`, error);
+            }
+          }
+
+          return {
+            ...channel,
+            is_following: followStatus.is_following,
+            is_muted: followStatus.is_muted
+          };
+        })
+      );
+
+      // Update following channels set for quick lookups
+      const followingIds = new Set<string>(
+        channelsWithFollowStatus
+          .filter(channel => channel.is_following)
+          .map(channel => channel.id)
+      );
+
+      // Update state only after all API calls complete
+      setFollowingChannels(followingIds);
+      setAllChannels(channelsWithFollowStatus);
+      setFilteredChannels(channelsWithFollowStatus);
+      
+      console.log('✅ Channel fetch complete:', {
+        total: channelsData.channels?.length || 0,
+        userOwned: userChannelIds.size,
+        showing: channelsWithFollowStatus.length,
+        following: followingIds.size
+      });
       
     } catch (err) {
       console.error('Channel fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch channels');
       setAllChannels([]);
       setFilteredChannels([]);
+      setFollowingChannels(new Set());
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userChannels]);
 
   // Client-side full-text search function
   const performClientSearch = useCallback((query: string) => {
@@ -113,44 +200,132 @@ export default function ChannelDiscovery() {
 
   // Handle follow/unfollow action
   const handleFollowToggle = async (channelId: string) => {
-    // TODO: Implement follow functionality when user authentication is available
-    // This would require the current user's channel ID to perform the follow action
+    if (userChannels.length === 0) {
+      console.warn('No user channels available for following');
+      return;
+    }
+
+    const userChannel = userChannels[0]; // Use the first user channel as the follower
+    // Find the channel and get its follow status
+    const channel = allChannels.find(c => c.id === channelId);
+    const isCurrentlyFollowing = channel?.is_following || false;
+    const action = isCurrentlyFollowing ? 'unfollow' : 'follow';
+    
+    // Prevent multiple simultaneous requests for the same channel
+    if (followingInProgress.has(channelId)) {
+      return;
+    }
     
     try {
-      // For now, just toggle the local state
-      setFollowingStates(prev => ({
-        ...prev,
-        [channelId]: !prev[channelId]
-      }));
+      // Set loading state
+      setFollowingInProgress(prev => new Set(prev).add(channelId));
+      
+      // Optimistic update - update the channel's follow status
+      setAllChannels(prev => prev.map(c => 
+        c.id === channelId 
+          ? { ...c, is_following: !isCurrentlyFollowing }
+          : c
+      ));
+      setFilteredChannels(prev => prev.map(c => 
+        c.id === channelId 
+          ? { ...c, is_following: !isCurrentlyFollowing }
+          : c
+      ));
 
-      // Real implementation would be:
-      // const userChannelId = getCurrentUserChannelId();
-      // const action = followingStates[channelId] ? 'unfollow' : 'follow';
-      // 
-      // const response = await makeApiRequest(buildApiUrl(`/api/v1/channels/${channelId}/follow`), {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     follower_id: userChannelId,
-      //     followed_id: channelId,
-      //     action
-      //   })
-      // });
+      // Make API call to follow/unfollow
+      // According to API docs: PUT /channels/{channel_id}/follow where channel_id is the follower
+      const response = await makeApiRequest(buildApiUrl(`/api/v1/channels/${userChannel.id}/follow`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          follower_id: userChannel.id,
+          followed_id: channelId,
+          action
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} channel`);
+      }
+
+      const result = await response.json();
+      console.log(`✅ Successfully ${action}ed channel:`, result);
+
+      // Update the channel with the server response
+      if (result.is_following !== undefined) {
+        setAllChannels(prev => prev.map(c => 
+          c.id === channelId 
+            ? { 
+                ...c, 
+                is_following: result.is_following,
+                is_muted: result.is_muted,
+                followers_count: result.followers_count || c.followers_count
+              }
+            : c
+        ));
+        setFilteredChannels(prev => prev.map(c => 
+          c.id === channelId 
+            ? { 
+                ...c, 
+                is_following: result.is_following,
+                is_muted: result.is_muted,
+                followers_count: result.followers_count || c.followers_count
+              }
+            : c
+        ));
+        
+        // Update the following set for quick lookups
+        const updatedFollowingChannels = new Set(followingChannels);
+        if (result.is_following) {
+          updatedFollowingChannels.add(channelId);
+        } else {
+          updatedFollowingChannels.delete(channelId);
+        }
+        setFollowingChannels(updatedFollowingChannels);
+      }
 
     } catch (err) {
       console.error('Follow action error:', err);
+      
+      // Show user-friendly error message
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update follow status';
+      console.warn(`Failed to ${action} channel:`, errorMessage);
+      
       // Revert the optimistic update on error
-      setFollowingStates(prev => ({
-        ...prev,
-        [channelId]: !prev[channelId]
-      }));
+      setAllChannels(prev => prev.map(c => 
+        c.id === channelId 
+          ? { ...c, is_following: isCurrentlyFollowing }
+          : c
+      ));
+      setFilteredChannels(prev => prev.map(c => 
+        c.id === channelId 
+          ? { ...c, is_following: isCurrentlyFollowing }
+          : c
+      ));
+      
+      // You could also show a toast notification here
+      // toast.error(`Failed to ${action} channel. Please try again.`);
+    } finally {
+      // Clear loading state
+      setFollowingInProgress(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(channelId);
+        return newSet;
+      });
     }
   };
 
-  // Load all channels on component mount
+  // Load user channels on component mount
   useEffect(() => {
-    fetchAllChannels();
-  }, [fetchAllChannels]);
+    loadUserChannels();
+  }, [loadUserChannels]);
+
+  // Fetch channels and follow status when user channels are loaded
+  useEffect(() => {
+    if (userChannels.length > 0) {
+      fetchChannelsAndFollowStatus();
+    }
+  }, [userChannels, fetchChannelsAndFollowStatus]);
 
   // Calculate pagination for filtered results
   const totalPages = Math.ceil(filteredChannels.length / CHANNELS_PER_PAGE);
@@ -185,6 +360,15 @@ export default function ChannelDiscovery() {
           Find and follow channels that match your interests
         </p>
         
+        {userChannels.length === 0 && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg max-w-2xl mx-auto">
+            <p className="text-sm text-yellow-800">
+              <strong>Note:</strong> You need to connect your channels to follow other channels. 
+              Please complete your account setup first.
+            </p>
+          </div>
+        )}
+        
         {/* Search Bar */}
         <div className="max-w-2xl mx-auto">
           <div className="relative">
@@ -218,7 +402,7 @@ export default function ChannelDiscovery() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
             <p className="text-red-700">{error}</p>
             <button 
-              onClick={() => fetchAllChannels()}
+              onClick={() => fetchChannelsAndFollowStatus()}
               className="mt-2 text-red-600 hover:text-red-800 font-medium"
             >
               Try again
@@ -268,13 +452,26 @@ export default function ChannelDiscovery() {
                     
                     <button 
                       onClick={() => handleFollowToggle(channel.id)}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                        followingStates[channel.id]
+                      disabled={userChannels.length === 0 || followingInProgress.has(channel.id)}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2 ${
+                        channel.is_following
                           ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                           : 'bg-blue-600 text-white hover:bg-blue-700'
+                      } ${
+                        userChannels.length === 0 || followingInProgress.has(channel.id)
+                          ? 'opacity-50 cursor-not-allowed' 
+                          : ''
                       }`}
                     >
-                      {followingStates[channel.id] ? 'Following' : 'Follow'}
+                      {followingInProgress.has(channel.id) && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                      )}
+                      {followingInProgress.has(channel.id) 
+                        ? 'Processing...' 
+                        : channel.is_following 
+                          ? 'Following' 
+                          : 'Follow'
+                      }
                     </button>
                   </div>
                 </div>
