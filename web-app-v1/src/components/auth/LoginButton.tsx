@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import LoginModal from './LoginModal';
 import ChannelConnectionModal from './ChannelConnectionModal';
+import { clearUserData } from '@/lib/auth/user-service';
 
 interface LoginButtonProps {
   className?: string;
@@ -112,13 +113,16 @@ export default function LoginButton({ className, children }: LoginButtonProps) {
         </div>
         <button 
           onClick={async () => {
-            console.log('🚪 Logging out - clearing all states');
+            console.log('🚪 Logging out - clearing all states and localStorage');
             setIsLoggingOut(true); // Prevent channel modal from opening during logout
             setLoginFlowComplete(false);
             setIsLoggingIn(false);
             setIsClearingData(false);
             setShowModal(false);
             setShowChannelModal(false);
+            
+            // Clear all stored user and channel data
+            clearUserData();
             
             try {
               await logout();

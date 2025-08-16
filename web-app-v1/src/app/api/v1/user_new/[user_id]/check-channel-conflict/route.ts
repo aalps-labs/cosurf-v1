@@ -4,16 +4,27 @@ import { buildApiUrl, makeApiRequest } from '@/lib/api-config';
 // Real API endpoint for channel conflict check - connects to backend
 export async function POST(
   request: NextRequest,
-  { params }: { params: { user_id: string } }
+  { params }: { params: Promise<{ user_id: string }> }
 ) {
   try {
-    const { user_id } = params;
-    const body = await request.json();
-    const { channel_id } = body;
+    const { user_id } = await params;
+    
+    // Get channel_id from query params or request body
+    const url = new URL(request.url);
+    let channel_id = url.searchParams.get('channel_id');
+    
+    if (!channel_id) {
+      try {
+        const body = await request.json();
+        channel_id = body.channel_id;
+      } catch (error) {
+        // No JSON body, that's fine if we have query param
+      }
+    }
 
     if (!channel_id) {
       return NextResponse.json(
-        { detail: 'channel_id is required in request body' },
+        { detail: 'channel_id is required in query params or request body' },
         { status: 400 }
       );
     }
@@ -29,9 +40,8 @@ export async function POST(
       backend_url: backendUrl
     });
 
-    const response = await makeApiRequest(backendUrl, {
-      method: 'POST',
-      body: JSON.stringify({ channel_id })
+    const response = await makeApiRequest(`${backendUrl}?channel_id=${channel_id}`, {
+      method: 'POST'
     });
 
     const result = await response.json();

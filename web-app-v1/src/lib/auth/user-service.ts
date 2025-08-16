@@ -113,6 +113,37 @@ export async function getUserByPrivyId(privyId: string) {
   }
 }
 
+export function clearUserData() {
+  try {
+    console.log('🧹 Clearing all user and channel data from localStorage...');
+    
+    // Clear specific channel data
+    const channelKeys = [
+      'connected_channels',
+      'channel_connection_timestamp'
+    ];
+    
+    channelKeys.forEach(key => {
+      if (localStorage.getItem(key)) {
+        localStorage.removeItem(key);
+        console.log(`🗑️ Cleared localStorage: ${key}`);
+      }
+    });
+    
+    // Clear all Privy-prefixed items
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('privy:') || key.startsWith('privy_')) {
+        localStorage.removeItem(key);
+        console.log(`🗑️ Cleared Privy localStorage: ${key}`);
+      }
+    });
+    
+    console.log('✅ All user data cleared from localStorage');
+  } catch (error) {
+    console.warn('Failed to clear localStorage:', error);
+  }
+}
+
 // Mock database functions - replace with your actual DB calls
 async function mockFindUserByEmail(email: string): Promise<any> {
   // TODO: Replace with actual database query

@@ -5,11 +5,11 @@ import { buildApiUrl, makeApiRequest } from '@/lib/api-config';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email } = body;
+    const { email, privy_id } = body;
 
-    if (!email) {
+    if (!email && !privy_id) {
       return NextResponse.json(
-        { detail: 'Email is required' },
+        { detail: 'At least one of email or privy_id is required' },
         { status: 400 }
       );
     }
@@ -17,14 +17,19 @@ export async function POST(request: NextRequest) {
     // Make real API call to backend
     const backendUrl = buildApiUrl('/api/v1/user_new/search-channels');
     
-    console.log('Searching channels by email in backend:', {
+    console.log('Searching channels by criteria in backend:', {
       email,
+      privy_id,
       backend_url: backendUrl
     });
 
+    const searchCriteria: any = {};
+    if (email) searchCriteria.email = email;
+    if (privy_id) searchCriteria.privy_id = privy_id;
+
     const response = await makeApiRequest(backendUrl, {
       method: 'POST',
-      body: JSON.stringify({ email })
+      body: JSON.stringify(searchCriteria)
     });
 
     const result = await response.json();
@@ -32,6 +37,7 @@ export async function POST(request: NextRequest) {
     console.log('Backend response for channel search:', {
       status: response.status,
       email,
+      privy_id,
       channel_count: result.channels?.length || 0,
       total: result.total
     });

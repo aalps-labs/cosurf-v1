@@ -32,25 +32,13 @@ export default function AuthDebugInfo() {
   const { authenticated, user, ready, getAccessToken } = usePrivy();
   const [mounted, setMounted] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<string>('');
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [channelSearchStatus, setChannelSearchStatus] = useState<string>('');
-  const [privyUserCreated, setPrivyUserCreated] = useState<boolean>(false);
+  const [storedChannels, setStoredChannels] = useState<Channel[]>([]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Clear channel data when user logs out
-  useEffect(() => {
-    if (!authenticated && mounted) {
-      setPrivyUserCreated(false);
-      setChannels([]);
-      setChannelSearchStatus('');
-      setTokenInfo('');
-      console.log('🔄 Cleared channel data on logout');
-    }
-  }, [authenticated, mounted]);
-
+  // Update token info when authentication changes
   useEffect(() => {
     if (authenticated && mounted) {
       getAccessToken()
@@ -67,99 +55,40 @@ export default function AuthDebugInfo() {
     }
   }, [authenticated, mounted, getAccessToken]);
 
-  // Handle user creation and channel search when authenticated
+  // Read stored channel data from localStorage
   useEffect(() => {
-    if (authenticated && user && mounted && !privyUserCreated) {
-      handleUserLoginFlow();
-    }
-  }, [authenticated, user, mounted, privyUserCreated]);
-
-  const handleUserLoginFlow = async () => {
-    try {
-      setChannelSearchStatus('Creating/updating Privy user...');
-      
-      // Step 1: Create/Update Privy user in database
-      const userResponse = await fetch('/api/v1/user_new', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          privy_data: user
-        })
-      });
-
-      if (!userResponse.ok) {
-        throw new Error(`User creation failed: ${userResponse.status}`);
-      }
-
-      const userData = await userResponse.json();
-      setPrivyUserCreated(true);
-      
-      // Step 2: Search for channels by email
-      if (user?.email?.address) {
-        setChannelSearchStatus('Searching for channels...');
-        
-        const channelResponse = await fetch('/api/v1/user_new/search-channels', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: user?.email?.address
-          })
-        });
-
-        if (channelResponse.ok) {
-          const channelData: ChannelSearchResponse = await channelResponse.json();
-          setChannels(channelData.channels);
-          setChannelSearchStatus(`Found ${channelData.total} channels`);
-          
-          // Step 3: Auto-connect channels if found
-          if (channelData.channels.length > 0) {
-            await connectChannelsToUser(userData.id, channelData.channels);
+    if (mounted) {
+      const updateStoredChannels = () => {
+        try {
+          const channelsData = localStorage.getItem('connected_channels');
+          if (channelsData) {
+            const parsedChannels = JSON.parse(channelsData);
+            setStoredChannels(Array.isArray(parsedChannels) ? parsedChannels : []);
+          } else {
+            setStoredChannels([]);
           }
-        } else {
-          setChannelSearchStatus('Channel search failed');
+        } catch (error) {
+          console.error('Error reading stored channels:', error);
+          setStoredChannels([]);
         }
-      } else {
-        setChannelSearchStatus('No email available for channel search');
-      }
-    } catch (error) {
-      console.error('User login flow error:', error);
-      setChannelSearchStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
+      };
 
-  const connectChannelsToUser = async (userId: string, foundChannels: Channel[]) => {
-    try {
-      setChannelSearchStatus('Connecting channels...');
+      // Initial read
+      updateStoredChannels();
+
+      // Listen for localStorage changes
+      const handleStorageChange = () => updateStoredChannels();
+      window.addEventListener('storage', handleStorageChange);
       
-      for (const channel of foundChannels) {
-        // Check for conflicts first
-        const conflictResponse = await fetch(
-          `/api/v1/user_new/${userId}/check-channel-conflict?channel_id=${channel.id}`,
-          { method: 'POST' }
-        );
-        
-        if (conflictResponse.ok) {
-          // No conflict, connect the channel
-          const connectResponse = await fetch(`/api/v1/user_new/${userId}/connect-channel`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              channel_id: channel.id
-            })
-          });
-          
-          if (!connectResponse.ok) {
-            console.error(`Failed to connect channel ${channel.name}`);
-          }
-        }
-      }
-      
-      setChannelSearchStatus(`Connected ${foundChannels.length} channels`);
-    } catch (error) {
-      console.error('Channel connection error:', error);
-      setChannelSearchStatus('Channel connection failed');
+      // Also check periodically for changes (in case same-tab updates)
+      const interval = setInterval(updateStoredChannels, 1000);
+
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        clearInterval(interval);
+      };
     }
-  };
+  }, [mounted]);
 
   if (!mounted) {
     return null;
@@ -229,25 +158,28 @@ export default function AuthDebugInfo() {
         </div>
 
         <div className="col-span-2">
-          <span className="font-semibold">Channel Status:</span> 
-          <span className="text-blue-600">
-            {channelSearchStatus || 'Not searched'}
+          <span className="font-semibold">Stored Channels:</span> 
+          <span className="text-purple-600">
+            {storedChannels.length} channels in localStorage
           </span>
         </div>
 
         <div className="col-span-2">
-          <span className="font-semibold">Connected Channels:</span> 
-          <span className="text-green-600">
-            {channels.length} channels found
+          <span className="font-semibold">Last Connection:</span> 
+          <span className="text-gray-600">
+            {typeof window !== 'undefined' && localStorage.getItem('channel_connection_timestamp')
+              ? new Date(localStorage.getItem('channel_connection_timestamp') || '').toLocaleString()
+              : 'Never'
+            }
           </span>
         </div>
       </div>
 
       {/* Channel List */}
-      {channels.length > 0 && (
+      {storedChannels.length > 0 && (
         <div className="mt-3 border-t pt-2">
-          <div className="font-semibold text-gray-700 mb-2">📺 Your Channels:</div>
-          {channels.map((channel, index) => (
+          <div className="font-semibold text-gray-700 mb-2">📺 Connected Channels (from localStorage):</div>
+          {storedChannels.map((channel, index) => (
             <div key={channel.id} className="bg-white p-2 rounded border mb-2 text-xs">
               <div className="flex justify-between items-start">
                 <div>
@@ -275,10 +207,24 @@ export default function AuthDebugInfo() {
       {/* Raw user object (collapsed) */}
       <details className="mt-2">
         <summary className="cursor-pointer text-gray-500 hover:text-gray-700">
-          Raw User Object
+          Raw Privy User Object
         </summary>
         <pre className="mt-1 text-xs bg-white p-2 rounded border overflow-auto max-h-32 text-black">
           {JSON.stringify(user, null, 2)}
+        </pre>
+      </details>
+
+      {/* Raw localStorage data (collapsed) */}
+      <details className="mt-2">
+        <summary className="cursor-pointer text-purple-500 hover:text-purple-700">
+          Raw localStorage Data
+        </summary>
+        <pre className="mt-1 text-xs bg-purple-50 p-2 rounded border overflow-auto max-h-32 text-black">
+          {JSON.stringify({
+            connected_channels: storedChannels,
+            channel_connection_timestamp: typeof window !== 'undefined' ? localStorage.getItem('channel_connection_timestamp') : null,
+            privy_keys: typeof window !== 'undefined' ? Object.keys(localStorage).filter(key => key.includes('privy')) : []
+          }, null, 2)}
         </pre>
       </details>
     </div>

@@ -34,8 +34,18 @@ export async function POST(request: NextRequest) {
     console.log('Backend response for user creation:', {
       status: response.status,
       user_id: result.user?.id,
-      privy_id: result.user?.privy_id
+      privy_id: result.user?.privy_id,
+      full_response: result
     });
+
+    // Validate the response structure matches expected schema
+    if (!result.user || !result.user.id) {
+      console.error('❌ Invalid backend response structure:', result);
+      return NextResponse.json(
+        { detail: 'Backend returned invalid user data structure' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(result);
     
