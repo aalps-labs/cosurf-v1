@@ -1,6 +1,7 @@
 import PaymentInterface from '../components/PaymentInterface';
 import AuthProvider from '../components/auth/AuthProvider';
 import LoginButton from '../components/auth/LoginButton';
+import AuthDebugInfo from '../components/auth/AuthDebugInfo';
 
 export default function Home() {
   return (
@@ -14,6 +15,11 @@ export default function Home() {
             </h1>
             <LoginButton />
           </div>
+        </div>
+
+        {/* Auth Debug Info */}
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <AuthDebugInfo />
         </div>
 
         {/* Existing payment interface - unchanged */}
