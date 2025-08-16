@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import LoginModal from './LoginModal';
 import ChannelConnectionModal from './ChannelConnectionModal';
@@ -21,6 +21,36 @@ export default function LoginButton({ className, children }: LoginButtonProps) {
   const [isClearingData, setIsClearingData] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { authenticated, user, logout, ready } = usePrivy();
+
+  // Check if user has already completed setup
+  const hasCompletedSetup = useCallback(() => {
+    try {
+      const connectedChannels = localStorage.getItem('connected_channels');
+      const connectionTimestamp = localStorage.getItem('channel_connection_timestamp');
+      
+      // Check if we have valid channel data and it's not too old (24 hours)
+      if (connectedChannels && connectionTimestamp) {
+        const timestamp = new Date(connectionTimestamp);
+        const now = new Date();
+        const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
+        
+        if (hoursDiff < 24) {
+          console.log('✅ User has completed setup recently, skipping channel modal');
+          return true;
+        } else {
+          console.log('⏰ Channel data is old, will refresh');
+          // Clear old data
+          localStorage.removeItem('connected_channels');
+          localStorage.removeItem('channel_connection_timestamp');
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.warn('Error checking setup completion:', error);
+      return false;
+    }
+  }, []);
 
   // Handle client-side mounting
   useEffect(() => {
@@ -58,15 +88,31 @@ export default function LoginButton({ className, children }: LoginButtonProps) {
   // Detect when Privy authentication completes during login flow
   useEffect(() => {
     if (authenticated && user && ready && isLoggingIn && !showChannelModal) {
+      // Check if user has already completed setup
+      if (hasCompletedSetup()) {
+        console.log('🎯 User already completed setup during login, marking as complete');
+        setShowModal(false);
+        setLoginFlowComplete(true);
+        setIsLoggingIn(false);
+        return;
+      }
+      
       console.log('✅ Privy authentication successful during login - showing channel modal');
       setShowModal(false); // Close login modal
       setShowChannelModal(true); // Open channel modal
     }
-  }, [authenticated, user, ready, isLoggingIn, showChannelModal]);
+  }, [authenticated, user, ready, isLoggingIn, showChannelModal, hasCompletedSetup]);
 
   // Detect authentication on page load/redirect (Google OAuth, etc.)
   useEffect(() => {
     if (authenticated && user && ready && !loginFlowComplete && !isLoggingIn && !showChannelModal && !showModal && mounted && !isLoggingOut) {
+      // Check if user has already completed setup
+      if (hasCompletedSetup()) {
+        console.log('🎯 User already completed setup, marking as complete');
+        setLoginFlowComplete(true);
+        return;
+      }
+      
       // Small delay to ensure Privy is fully initialized and not during logout
       const timer = setTimeout(() => {
         console.log('✅ User authenticated on page load/redirect - showing channel modal', {
@@ -80,7 +126,7 @@ export default function LoginButton({ className, children }: LoginButtonProps) {
       
       return () => clearTimeout(timer);
     }
-  }, [authenticated, user, ready, loginFlowComplete, isLoggingIn, showChannelModal, showModal, mounted, isLoggingOut]);
+  }, [authenticated, user, ready, loginFlowComplete, isLoggingIn, showChannelModal, showModal, mounted, isLoggingOut, hasCompletedSetup]);
 
   // Reset loading state when login flow completes
   useEffect(() => {
