@@ -61,9 +61,9 @@ All endpoints are prefixed with `/api/v1/user_new`
 
 ### Channel Operations
 
-#### Search Channels by Email
+#### Search Channels by Email and/or Privy ID
 - **POST** `/search-channels`
-- **Description**: Find channels associated with an email address
+- **Description**: Find channels associated with an email address and/or Privy ID
 - **Request Body**: `ChannelSearchRequest`
 - **Response**: `ChannelSearchResponse`
 - **Status Codes**: 200 (success), 400 (validation error), 500 (server error)
@@ -118,6 +118,25 @@ All endpoints are prefixed with `/api/v1/user_new`
 }
 ```
 
+### ChannelSearchRequest
+```json
+{
+  // Search by email only
+  "email": "user@example.com"
+}
+
+// OR search by Privy ID only
+{
+  "privy_id": "did:privy:clp123abc..."
+}
+
+// OR search by both (finds channels matching either criteria)
+{
+  "email": "user@example.com",
+  "privy_id": "did:privy:clp123abc..."
+}
+```
+
 ### ChannelSearchResponse
 ```json
 {
@@ -136,13 +155,14 @@ All endpoints are prefixed with `/api/v1/user_new`
         "user_id": "user-uuid",
         "user_name": "Owner Name",
         "user_email": "owner@example.com",
+        "privy_id": null,
         "is_clerk_user": true,
         "is_privy_user": false
       }
     }
   ],
   "total": 1,
-  "message": "Found 1 channels for email user@example.com"
+  "message": "Found 1 channels for email user@example.com and Privy ID did:privy:clp123abc..."
 }
 ```
 
@@ -165,6 +185,38 @@ Common error scenarios:
 ## Usage Flow
 
 1. **User Login**: POST to `/` with Privy data to create/update user
-2. **Channel Discovery**: POST to `/search-channels` with email to find existing channels
+2. **Channel Discovery**: POST to `/search-channels` with email and/or Privy ID to find existing channels
 3. **Conflict Check**: POST to `/{user_id}/check-channel-conflict` to verify ownership
 4. **Channel Connection**: POST to `/{user_id}/connect-channel` to link channel to Privy user
+
+## Channel Search Examples
+
+### Search by Email Only
+```bash
+curl -X POST /api/v1/user_new/search-channels \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com"}'
+```
+
+### Search by Privy ID Only
+```bash
+curl -X POST /api/v1/user_new/search-channels \
+  -H "Content-Type: application/json" \
+  -d '{"privy_id": "did:privy:clp123abc..."}'
+```
+
+### Search by Both (Comprehensive Search)
+```bash
+curl -X POST /api/v1/user_new/search-channels \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "privy_id": "did:privy:clp123abc..."
+  }'
+```
+
+**Search Behavior:**
+- **Single Criteria**: Finds channels matching the provided identifier
+- **Combined Criteria**: Finds channels matching either email OR Privy ID (OR logic)
+- **Deduplication**: Automatically removes duplicate channels from results
+- **Comprehensive Coverage**: Searches across both Clerk and Privy user ownership

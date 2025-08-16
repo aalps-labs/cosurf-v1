@@ -19,7 +19,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
   // Don't render Privy until mounted to prevent SSR issues
   if (!mounted) {
-    return <div>{children}</div>;
+    return <>{children}</>;
   }
 
   return (

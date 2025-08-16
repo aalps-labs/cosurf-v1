@@ -257,7 +257,7 @@ export default function PaymentInterface() {
             const key = `BAZAAR-${service.resource}`;
             
             return (
-              <div key={index} className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
+              <div key={key} className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
                 <div className="mb-3">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-sm text-gray-900 truncate">

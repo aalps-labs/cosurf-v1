@@ -25,13 +25,19 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   });
   const [isPrivyModalOpen, setIsPrivyModalOpen] = useState(false);
 
-  // Handle successful authentication - improved detection
+  // Handle successful authentication - show success state
   useEffect(() => {
-    if (authenticated && user && ready && !authState.success) {
-      console.log('Privy authentication detected:', { authenticated, user: !!user, ready });
-      handleUserLogin();
+    if (authenticated && user && ready && isOpen) {
+      console.log('✅ Privy authentication successful in LoginModal');
+      setAuthState({
+        loading: false,
+        message: 'Authentication successful! Setting up your account...',
+        error: '',
+        success: true
+      });
+      setIsPrivyModalOpen(false);
     }
-  }, [authenticated, user, ready, authState.success]);
+  }, [authenticated, user, ready, isOpen]);
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -60,58 +66,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     }
   }, [isPrivyModalOpen, authenticated, ready, authState.loading]);
 
-  const handleUserLogin = async () => {
-    if (!user) return;
-    
-    setAuthState(prev => ({ ...prev, loading: true, error: '' }));
-    
-    try {
-      // Get the access token from Privy - THIS IS THE REAL TOKEN
-      const accessToken = await getAccessToken();
-      
-      const response = await fetch('/api/auth/privy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'login',
-          accessToken: accessToken
-        })
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        setAuthState({
-          loading: false,
-          message: result.message,
-          error: '',
-          success: true
-        });
-        setIsPrivyModalOpen(false);
-        
-        // Auto-close after showing success message
-        setTimeout(() => {
-          handleClose();
-        }, 3000);
-      } else {
-        setAuthState({
-          loading: false,
-          message: '',
-          error: result.error || 'Login failed. Please try again.',
-          success: false
-        });
-        setIsPrivyModalOpen(false);
-      }
-    } catch (error) {
-      setAuthState({
-        loading: false,
-        message: '',
-        error: 'Connection error. Please try again.',
-        success: false
-      });
-      setIsPrivyModalOpen(false);
-    }
-  };
+  // Removed handleUserLogin - now using channel connection modal flow
 
   const handleLoginClick = async () => {
     try {
@@ -130,6 +85,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       setIsPrivyModalOpen(false);
     }
   };
+
+
 
   const handleClose = () => {
     // Reset all state when closing
@@ -189,17 +146,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
                 <p className="text-gray-600">Setting up your account...</p>
               </div>
-            ) : authState.success ? (
-              <div>
-                <div className="text-green-500 text-4xl mb-2">✓</div>
-                <h3 className="font-semibold text-lg mb-2 text-gray-900">Welcome!</h3>
-                <p className="text-gray-600 mb-4">{authState.message}</p>
-                <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded">
-                  <div>Email: {user?.email?.address || 'Not provided'}</div>
-                  <div>Wallet: {user?.wallet?.address ? `${user.wallet.address.slice(0,6)}...${user.wallet.address.slice(-4)}` : 'Not connected'}</div>
-                </div>
-                <p className="text-xs text-gray-500 mt-3">Closing automatically...</p>
-              </div>
             ) : authState.error ? (
               <div>
                 <div className="text-red-500 text-4xl mb-2">✗</div>
@@ -212,7 +158,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   Try Again
                 </button>
               </div>
-            ) : null}
+            ) : (
+              <div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600">Preparing your account...</p>
+              </div>
+            )}
           </div>
         )}
       </div>
