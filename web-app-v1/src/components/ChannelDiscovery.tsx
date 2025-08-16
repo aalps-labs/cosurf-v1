@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { buildApiUrl, makeApiRequest } from '@/lib/api-config';
+import { useRouter } from 'next/navigation';
+import { useUserData } from './auth/DataProvider';
 
 interface Channel {
   id: string;
@@ -32,6 +34,8 @@ interface FollowStatus {
 }
 
 export default function ChannelDiscovery() {
+  const router = useRouter();
+  const { userChannels } = useUserData(); // Get user channels from global context
   const [searchQuery, setSearchQuery] = useState('');
   const [allChannels, setAllChannels] = useState<Channel[]>([]);
   const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
@@ -39,27 +43,12 @@ export default function ChannelDiscovery() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  const [userChannels, setUserChannels] = useState<Channel[]>([]);
   const [followingChannels, setFollowingChannels] = useState<Set<string>>(new Set());
   const [followingInProgress, setFollowingInProgress] = useState<Set<string>>(new Set());
   
   const CHANNELS_PER_PAGE = 12;
 
-  // Load user's connected channels from localStorage (no API call needed)
-  const loadUserChannels = useCallback(() => {
-    try {
-      const connectedChannels = localStorage.getItem('connected_channels');
-      if (connectedChannels) {
-        const channels: Channel[] = JSON.parse(connectedChannels);
-        setUserChannels(channels);
-        console.log('📊 Loaded user channels from localStorage:', channels.length);
-        return channels;
-      }
-    } catch (error) {
-      console.warn('Failed to load user channels from localStorage:', error);
-    }
-    return [];
-  }, []);
+  // User channels are now loaded globally via DataProvider
 
   // Fetch channels and following status (following the same pattern as the provided page.tsx)
   const fetchChannelsAndFollowStatus = useCallback(async () => {
@@ -315,12 +304,7 @@ export default function ChannelDiscovery() {
     }
   };
 
-  // Load user channels on component mount
-  useEffect(() => {
-    loadUserChannels();
-  }, [loadUserChannels]);
-
-  // Fetch channels and follow status when user channels are loaded
+  // Fetch channels and follow status when user channels are available
   useEffect(() => {
     if (userChannels.length > 0) {
       fetchChannelsAndFollowStatus();
@@ -348,6 +332,11 @@ export default function ChannelDiscovery() {
 
   const generateAvatarUrl = (name: string) => {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff&size=48`;
+  };
+
+  // Handle channel card click to navigate to profile
+  const handleChannelClick = (channelId: string) => {
+    router.push(`/channels/${channelId}`);
   };
 
   return (
@@ -418,7 +407,10 @@ export default function ChannelDiscovery() {
             {paginatedChannels.map((channel) => (
               <div key={channel.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
                 <div className="p-6">
-                  <div className="flex items-start space-x-4">
+                  <div 
+                    className="flex items-start space-x-4 cursor-pointer"
+                    onClick={() => handleChannelClick(channel.id)}
+                  >
                     <div className="flex-shrink-0">
                       <img
                         className="h-12 w-12 rounded-full object-cover"
@@ -427,7 +419,7 @@ export default function ChannelDiscovery() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">
+                      <h3 className="text-lg font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors">
                         {channel.name}
                       </h3>
                       <p className="text-sm text-gray-500 truncate">
@@ -451,7 +443,10 @@ export default function ChannelDiscovery() {
                     </div>
                     
                     <button 
-                      onClick={() => handleFollowToggle(channel.id)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent triggering channel navigation
+                        handleFollowToggle(channel.id);
+                      }}
                       disabled={userChannels.length === 0 || followingInProgress.has(channel.id)}
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2 ${
                         channel.is_following
