@@ -1,15 +1,19 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import AuthProvider from '../../../components/auth/AuthProvider';
 import DataProvider from '../../../components/auth/DataProvider';
+import Header from '../../../components/Header';
 
 export default function ChannelProfilePage() {
   const params = useParams();
   const channelId = params.channel_id as string;
 
   return (
-    <DataProvider>
-      <div className="min-h-screen bg-gray-50">
+    <AuthProvider>
+      <DataProvider>
+        <div className="min-h-screen bg-gray-50">
+          <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Main Layout Container - Single merged container */}
           <div className="bg-white rounded-lg shadow-md">
@@ -86,6 +90,7 @@ export default function ChannelProfilePage() {
           </div>
         </div>
       </div>
-    </DataProvider>
+      </DataProvider>
+    </AuthProvider>
   );
 }
