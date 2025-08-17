@@ -9,7 +9,7 @@ import DataProvider from '../../../components/auth/DataProvider';
 import LoginTriggerProvider from '../../../components/auth/LoginTriggerContext';
 import Header from '../../../components/Header';
 import { useUserData } from '../../../components/auth/DataProvider';
-import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalLink } from 'lucide-react';
+import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalLink, Coins } from 'lucide-react';
 import FolderTree from '../../../components/FolderTree';
 import ChatInterface from '../../../components/ChatInterface';
 import ChannelInterface from '../../../components/ChannelInterface';
@@ -253,19 +253,31 @@ function ChannelContent() {
                       {/* Vertical Separator */}
                       <div className="h-12 w-px bg-gray-200"></div>
                       
-                      {/* Reputation Score */}
+                      {/* Staking */}
                       <motion.div
                         whileHover={{ scale: 1.05 }}
                         transition={{ duration: 0.2 }}
                         className="flex flex-col items-center group cursor-pointer px-4"
                       >
-                        <span className="text-sm font-medium text-gray-500 group-hover:text-gray-600 mb-1">
-                          repscore
-                        </span>
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-sm font-medium text-gray-500 group-hover:text-gray-600">
+                            Staking
+                          </span>
+                          {/* Conditional Stake Button - Only show if current user's channel */}
+                          {userChannels.some(channel => channel.id === channelInfo.id) && (
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className="px-2 py-0.5 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700 transition-colors duration-200"
+                            >
+                              Stake
+                            </motion.button>
+                          )}
+                        </div>
                         <div className="flex items-center space-x-1">
-                          <Star className="w-4 h-4 text-gray-500 group-hover:text-gray-700" strokeWidth={1.5} />
+                          <Coins className="w-4 h-4 text-gray-500 group-hover:text-gray-700" strokeWidth={1.5} />
                           <span className="text-lg font-bold text-gray-700 group-hover:text-gray-900">
-                            {channelInfo.rep_score || '0'}
+                            {((channelInfo.rep_score || 0) / 1000).toFixed(3)} ETH
                           </span>
                         </div>
                       </motion.div>
