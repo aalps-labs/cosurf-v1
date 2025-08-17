@@ -12,6 +12,7 @@ import { useUserData } from '../../../components/auth/DataProvider';
 import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalLink } from 'lucide-react';
 import FolderTree from '../../../components/FolderTree';
 import ChannelDescription from '../../../components/ChannelDescription';
+import RecentlyAsked from '../../../components/RecentlyAsked';
 import { useChannelData } from '../../../hooks/useChannelData';
 import type { Document } from '../../../components/FolderTree';
 
@@ -162,7 +163,7 @@ function ChannelContent() {
                           transition={{ duration: 0.2 }}
                           className="relative"
                         >
-                          <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 group-hover:border-gray-300 transition-colors duration-200">
+                          <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-200 group-hover:border-gray-300 transition-colors duration-200">
                             <img
                               className="w-full h-full object-cover"
                               src={generateAvatarUrl(channelInfo.name)}
@@ -170,9 +171,9 @@ function ChannelContent() {
                             />
                           </div>
                           
-                          {/* Tiny Status Indicator */}
-                          <div className="absolute -bottom-0.5 -right-0.5">
-                            <div className={`w-2.5 h-2.5 rounded-full border border-white ${
+                          {/* Status Indicator */}
+                          <div className="absolute -bottom-1 -right-1">
+                            <div className={`w-3 h-3 rounded-full border-2 border-white ${
                               channelInfo.is_active ? 'bg-green-500' : 'bg-gray-300'
                             }`} />
                           </div>
@@ -186,7 +187,7 @@ function ChannelContent() {
                             initial={{ y: 5, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ duration: 0.6, delay: 0.4 }}
-                            className="text-lg font-medium text-gray-900 truncate"
+                            className="text-2xl font-bold text-gray-900 truncate"
                           >
                             {channelInfo.name}
                           </motion.h1>
@@ -208,7 +209,7 @@ function ChannelContent() {
                       initial={{ x: 20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
                       transition={{ duration: 0.6, delay: 0.4 }}
-                      className="flex items-center space-x-4 flex-shrink-0"
+                      className="flex items-center space-x-8 flex-shrink-0"
                     >
                       {/* Conditional Follow Button - Only show if not current user's channel */}
                       {!userChannels.some(channel => channel.id === channelInfo.id) && (
@@ -225,24 +226,37 @@ function ChannelContent() {
                       <motion.div
                         whileHover={{ scale: 1.05 }}
                         transition={{ duration: 0.2 }}
-                        className="flex items-center space-x-1 group cursor-pointer"
+                        className="flex flex-col items-center group cursor-pointer px-4"
                       >
-                        <Users className="w-3 h-3 text-gray-500 group-hover:text-gray-700" strokeWidth={1.5} />
-                        <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                          {channelInfo.followers_count?.toLocaleString() || '0'}
+                        <span className="text-sm font-medium text-gray-500 group-hover:text-gray-600 mb-1">
+                          followers
                         </span>
+                        <div className="flex items-center space-x-1">
+                          <Users className="w-4 h-4 text-gray-500 group-hover:text-gray-700" strokeWidth={1.5} />
+                          <span className="text-lg font-bold text-gray-700 group-hover:text-gray-900">
+                            {channelInfo.followers_count?.toLocaleString() || '0'}
+                          </span>
+                        </div>
                       </motion.div>
+                      
+                      {/* Vertical Separator */}
+                      <div className="h-12 w-px bg-gray-200"></div>
                       
                       {/* Reputation Score */}
                       <motion.div
                         whileHover={{ scale: 1.05 }}
                         transition={{ duration: 0.2 }}
-                        className="flex items-center space-x-1 group cursor-pointer"
+                        className="flex flex-col items-center group cursor-pointer px-4"
                       >
-                        <Star className="w-3 h-3 text-gray-500 group-hover:text-gray-700" strokeWidth={1.5} />
-                        <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                          {channelInfo.rep_score || '0'}
+                        <span className="text-sm font-medium text-gray-500 group-hover:text-gray-600 mb-1">
+                          repscore
                         </span>
+                        <div className="flex items-center space-x-1">
+                          <Star className="w-4 h-4 text-gray-500 group-hover:text-gray-700" strokeWidth={1.5} />
+                          <span className="text-lg font-bold text-gray-700 group-hover:text-gray-900">
+                            {channelInfo.rep_score || '0'}
+                          </span>
+                        </div>
                       </motion.div>
                     </motion.div>
                   </div>
@@ -251,45 +265,52 @@ function ChannelContent() {
                 )}
               </motion.div>
               
-              {/* MAIN AREA - Channel Description and Content */}
+              {/* MAIN AREA - Split Layout */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.8, delay: 0.6 }}
-                className="flex-1 p-8 flex flex-col"
+                className="flex-1 p-8 flex flex-col space-y-6"
               >
-                {/* Channel Description Component */}
+                {/* Top Section - Channel Description */}
                 {channelInfo?.description && (
                   <ChannelDescription description={channelInfo.description} />
                 )}
 
-                {/* Content Space */}
-                <motion.div
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.8, delay: channelInfo?.description ? 1.0 : 0.8 }}
-                  className="flex-1 flex items-center justify-center"
-                >
-                  <div className="text-center max-w-md">
-                    <div className="w-16 h-16 mx-auto mb-8 flex items-center justify-center">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                      >
-                        <Circle className="w-16 h-16 text-gray-200" strokeWidth={0.5} />
-                      </motion.div>
-                    </div>
-                    <h3 className="text-xl font-light text-gray-400 mb-4 tracking-wide">
-                      {channelInfo?.description ? 'ADDITIONAL CONTENT' : 'CONTENT SPACE'}
-                    </h3>
-                    <p className="text-gray-300 font-light leading-relaxed">
-                      {channelInfo?.description 
-                        ? 'More content can be displayed here below the description.'
-                        : 'This area is ready for your content to shine with perfect clarity and focus.'
-                      }
-                    </p>
+                {/* Bottom Section - Split Content with Fixed Height */}
+                <div className="h-[32rem] flex space-x-6">
+                  {/* Left Half - Recently Asked */}
+                  <div className="flex-1">
+                    <RecentlyAsked channelId={channelId} />
                   </div>
-                </motion.div>
+
+                  {/* Right Half - Additional Content */}
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 1.0 }}
+                    className="flex-1"
+                  >
+                    <div className="h-full bg-gradient-to-br from-gray-50 to-purple-50/30 border border-gray-200/60 rounded-xl shadow-sm backdrop-blur-sm flex items-center justify-center">
+                      <div className="text-center max-w-md">
+                        <div className="w-16 h-16 mx-auto mb-8 flex items-center justify-center">
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                          >
+                            <Circle className="w-16 h-16 text-gray-200" strokeWidth={0.5} />
+                          </motion.div>
+                        </div>
+                        <h3 className="text-xl font-light text-gray-400 mb-4 tracking-wide">
+                          ADDITIONAL CONTENT
+                        </h3>
+                        <p className="text-gray-300 font-light leading-relaxed">
+                          This space is available for future content sections and features.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
               </motion.div>
             </div>
 

@@ -15,7 +15,7 @@ const ChannelDescription: React.FC<ChannelDescriptionProps> = ({ description }) 
   const [contentHeight, setContentHeight] = useState<number>(0);
   const contentRef = useRef<HTMLDivElement>(null);
   
-  const MAX_HEIGHT = 320; // h-80 equivalent in pixels
+  const MAX_HEIGHT = 240; // h-60 equivalent in pixels
 
   // Measure content height after description loads
   useEffect(() => {
