@@ -13,6 +13,7 @@ import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalL
 import FolderTree from '../../../components/FolderTree';
 import ChannelDescription from '../../../components/ChannelDescription';
 import RecentlyAsked from '../../../components/RecentlyAsked';
+import VersionTimeline from '../../../components/VersionTimeline';
 import { useChannelData } from '../../../hooks/useChannelData';
 import type { Document } from '../../../components/FolderTree';
 
@@ -116,7 +117,7 @@ function ChannelContent() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
+                transition={{ duration: 0.8 }}
                 className="border-b border-gray-50 px-6 py-3 bg-gradient-to-b from-gray-50/30 to-transparent"
               >
                 {loading ? (
@@ -153,7 +154,7 @@ function ChannelContent() {
                     <motion.div
                       initial={{ x: -20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
-                      transition={{ duration: 0.6, delay: 0.3 }}
+                      transition={{ duration: 0.6 }}
                       className="flex items-center space-x-3 flex-1 min-w-0"
                     >
                       {/* Tiny Avatar */}
@@ -208,7 +209,7 @@ function ChannelContent() {
                     <motion.div
                       initial={{ x: 20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
-                      transition={{ duration: 0.6, delay: 0.4 }}
+                      transition={{ duration: 0.6, delay: 0.2 }}
                       className="flex items-center space-x-8 flex-shrink-0"
                     >
                       {/* Conditional Follow Button - Only show if not current user's channel */}
@@ -266,52 +267,48 @@ function ChannelContent() {
               </motion.div>
               
               {/* MAIN AREA - Split Layout */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.6 }}
-                className="flex-1 p-8 flex flex-col space-y-6"
-              >
+              <div className="flex-1 p-8 flex flex-col space-y-6">
                 {/* Top Section - Channel Description */}
-                {channelInfo?.description && (
-                  <ChannelDescription description={channelInfo.description} />
+                {channelInfo?.description && !loading && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                  >
+                    <ChannelDescription description={channelInfo.description} />
+                  </motion.div>
                 )}
 
                 {/* Bottom Section - Split Content with Fixed Height */}
-                <div className="h-[32rem] flex space-x-6">
-                  {/* Left Half - Recently Asked */}
-                  <div className="flex-1">
-                    <RecentlyAsked channelId={channelId} />
-                  </div>
-
-                  {/* Right Half - Additional Content */}
+                {channelInfo && !loading && (
                   <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.8, delay: 1.0 }}
-                    className="flex-1"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.6 }}
+                    className="h-[32rem] flex space-x-6"
                   >
-                    <div className="h-full bg-gradient-to-br from-gray-50 to-purple-50/30 border border-gray-200/60 rounded-xl shadow-sm backdrop-blur-sm flex items-center justify-center">
-                      <div className="text-center max-w-md">
-                        <div className="w-16 h-16 mx-auto mb-8 flex items-center justify-center">
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                          >
-                            <Circle className="w-16 h-16 text-gray-200" strokeWidth={0.5} />
-                          </motion.div>
-                        </div>
-                        <h3 className="text-xl font-light text-gray-400 mb-4 tracking-wide">
-                          ADDITIONAL CONTENT
-                        </h3>
-                        <p className="text-gray-300 font-light leading-relaxed">
-                          This space is available for future content sections and features.
-                        </p>
-                      </div>
-                    </div>
+                    {/* Left Half - Recently Asked */}
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.6, delay: 0.8 }}
+                      className="flex-1"
+                    >
+                      <RecentlyAsked channelId={channelId} />
+                    </motion.div>
+
+                    {/* Right Half - Version Timeline */}
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.6, delay: 1.0 }}
+                      className="flex-1"
+                    >
+                      <VersionTimeline channelId={channelId} />
+                    </motion.div>
                   </motion.div>
-                </div>
-              </motion.div>
+                )}
+              </div>
             </div>
 
             {/* Minimal Vertical Divider */}
