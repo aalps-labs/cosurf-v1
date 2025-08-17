@@ -2,12 +2,21 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+export interface DocumentReference {
+  id: string;
+  title: string;
+  url: string;
+  similarity: number;
+  docType: string;
+}
+
 export interface Message {
   id: string;
   content: string;
   sender: 'user' | 'assistant';
   timestamp: Date;
   isTyping?: boolean;
+  references?: DocumentReference[];
 }
 
 export interface ChatSession {
@@ -27,6 +36,8 @@ interface UseChatHistoryReturn {
   updateSession: (sessionId: string, messages: Message[]) => void;
   deleteSession: (sessionId: string) => void;
   clearAllSessions: () => void;
+  getOrCreateSession: (channelId: string, channelName?: string) => string;
+  isLoaded: boolean;
 }
 
 const MAX_SESSIONS = 10;
@@ -34,6 +45,7 @@ const MAX_SESSIONS = 10;
 export const useChatHistory = (channelId: string): UseChatHistoryReturn => {
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [recentSessions, setRecentSessions] = useState<ChatSession[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Load sessions from localStorage on mount
   useEffect(() => {
@@ -66,13 +78,39 @@ export const useChatHistory = (channelId: string): UseChatHistoryReturn => {
         
         setRecentSessions(sessions);
         
-        // Load the most recent session if available
-        if (sessions.length > 0) {
-          setCurrentSession(sessions[0]);
+        // Load the last active session from localStorage
+        const lastActiveSessionId = localStorage.getItem(`last_active_session_${channelId}`);
+        if (lastActiveSessionId) {
+          const lastActiveSession = sessions.find(s => s.id === lastActiveSessionId);
+          if (lastActiveSession) {
+            setCurrentSession(lastActiveSession);
+            return;
+          }
         }
+        
+        // If no last active session, check for reusable sessions
+        const reusableSession = sessions.find(session => {
+          const hasUserMessages = session.messages.some(msg => msg.sender === 'user');
+          const hasOnlyOneAIMessage = session.messages.length === 1 && session.messages[0].sender === 'assistant';
+          return !hasUserMessages && hasOnlyOneAIMessage;
+        });
+
+        if (reusableSession) {
+          console.log('🔄 Auto-loading reusable session with only AI message:', reusableSession.id);
+          setCurrentSession(reusableSession);
+          localStorage.setItem(`last_active_session_${channelId}`, reusableSession.id);
+          return;
+        }
+        
+        // No sessions to reuse, set to null to trigger new session creation
+        setCurrentSession(null);
       }
+      
+      // Mark as loaded regardless of whether we found sessions
+      setIsLoaded(true);
     } catch (error) {
       console.error('Failed to load chat sessions:', error);
+      setIsLoaded(true);
     }
   }, [channelId]);
 
@@ -131,8 +169,10 @@ export const useChatHistory = (channelId: string): UseChatHistoryReturn => {
     const session = recentSessions.find(s => s.id === sessionId);
     if (session) {
       setCurrentSession(session);
+      // Save as last active session
+      localStorage.setItem(`last_active_session_${channelId}`, sessionId);
     }
-  }, [recentSessions]);
+  }, [recentSessions, channelId]);
 
   const updateSession = useCallback((sessionId: string, messages: Message[]) => {
     const now = new Date();
@@ -175,15 +215,46 @@ export const useChatHistory = (channelId: string): UseChatHistoryReturn => {
     setRecentSessions([]);
     setCurrentSession(null);
     localStorage.removeItem(`chat_sessions_${channelId}`);
+    localStorage.removeItem(`last_active_session_${channelId}`);
   }, [channelId]);
+
+  // Get existing session or create new one based on conditions
+  const getOrCreateSession = useCallback((channelId: string, channelName?: string): string => {
+    // Check if there's a recent session with only AI messages (no user messages)
+    const reusableSession = recentSessions.find(session => {
+      const hasUserMessages = session.messages.some(msg => msg.sender === 'user');
+      const hasOnlyOneAIMessage = session.messages.length === 1 && session.messages[0].sender === 'assistant';
+      return !hasUserMessages && hasOnlyOneAIMessage;
+    });
+
+    if (reusableSession) {
+      console.log('🔄 Reusing existing session with only AI message:', reusableSession.id);
+      setCurrentSession(reusableSession);
+      localStorage.setItem(`last_active_session_${channelId}`, reusableSession.id);
+      return reusableSession.id;
+    }
+
+    // No reusable session found, create a new one
+    console.log('📝 Creating new session');
+    return createNewSession(channelId, channelName);
+  }, [recentSessions, createNewSession, channelId]);
+
+  // Update createNewSession to save as last active session
+  const createNewSessionWithTracking = useCallback((channelId: string, channelName?: string): string => {
+    const sessionId = createNewSession(channelId, channelName);
+    localStorage.setItem(`last_active_session_${channelId}`, sessionId);
+    return sessionId;
+  }, [createNewSession, channelId]);
 
   return {
     currentSession,
     recentSessions,
-    createNewSession,
+    createNewSession: createNewSessionWithTracking,
     loadSession,
     updateSession,
     deleteSession,
-    clearAllSessions
+    clearAllSessions,
+    getOrCreateSession,
+    isLoaded
   };
 };

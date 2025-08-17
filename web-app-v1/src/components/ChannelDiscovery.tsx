@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { buildApiUrl, makeApiRequest } from '@/lib/api-config';
+import { getCurrentAvatarUrl } from '@/lib/avatar-utils';
 import { useRouter } from 'next/navigation';
 import { useUserData } from './auth/DataProvider';
 import { useLoginTrigger } from './auth/LoginTriggerContext';
@@ -51,6 +52,7 @@ export default function ChannelDiscovery() {
 
   const [followingChannels, setFollowingChannels] = useState<Set<string>>(new Set());
   const [followingInProgress, setFollowingInProgress] = useState<Set<string>>(new Set());
+  const [failedAvatars, setFailedAvatars] = useState<Map<string, number>>(new Map());
   
   const CHANNELS_PER_PAGE = 12;
 
@@ -361,8 +363,16 @@ export default function ChannelDiscovery() {
     });
   };
 
-  const generateAvatarUrl = (name: string) => {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff&size=48`;
+  // Avatar logic is now handled by shared utility
+
+  // Handle avatar load error
+  const handleAvatarError = (channelId: string) => {
+    setFailedAvatars(prev => {
+      const newMap = new Map(prev);
+      const currentFailures = newMap.get(channelId) || 0;
+      newMap.set(channelId, currentFailures + 1);
+      return newMap;
+    });
   };
 
   // Handle channel card click to navigate to profile
@@ -607,8 +617,13 @@ export default function ChannelDiscovery() {
                                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-xl blur opacity-50"></div>
                                 <img
                                   className="relative h-12 w-12 rounded-xl object-cover border-2 border-white/30"
-                                  src={generateAvatarUrl(channel.name)}
+                                  src={getCurrentAvatarUrl(
+                                    channel.id, 
+                                    channel.name,
+                                    failedAvatars.get(channel.id) || 0
+                                  )}
                                   alt={channel.name}
+                                  onError={() => handleAvatarError(channel.id)}
                                 />
                               </motion.div>
                               

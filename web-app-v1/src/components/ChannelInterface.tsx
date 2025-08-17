@@ -3,8 +3,9 @@
 import { motion } from 'framer-motion';
 import ChatInput from './ChatInput';
 import ChannelDescription from './ChannelDescription';
-import RecentlyAsked from './RecentlyAsked';
-import VersionTimeline from './VersionTimeline';
+import ChannelInsights from './ChannelInsights';
+import OtherChats from './OtherChats';
+import CollabChannels from './CollabChannels';
 
 interface ChannelInfo {
   id: string;
@@ -24,6 +25,7 @@ interface ChannelInterfaceProps {
   channelInfo: ChannelInfo | null;
   loading?: boolean;
   onChatMessage?: (message: string) => void;
+  onViewSwitch?: (view: 'channel' | 'chat') => void;
   className?: string;
 }
 
@@ -32,19 +34,26 @@ export default function ChannelInterface({
   channelInfo,
   loading = false,
   onChatMessage,
+  onViewSwitch,
   className = ""
 }: ChannelInterfaceProps) {
   
   const handleChatMessage = (message: string) => {
     console.log('Chat message:', message);
+    
+    // Switch to chat view first
+    if (onViewSwitch) {
+      onViewSwitch('chat');
+    }
+    
+    // Then trigger the chat message
     if (onChatMessage) {
       onChatMessage(message);
     }
-    // TODO: Implement chat logic or switch to chat interface
   };
 
   return (
-    <div className={`flex-1 p-8 flex flex-col space-y-6 ${className}`}>
+    <div className={`flex-1 p-8 flex flex-col space-y-6 min-h-[76vh] max-h-[76vh] overflow-y-auto ${className}`}>
       {/* Chat Input Section */}
       {channelInfo && !loading && (
         <motion.div
@@ -70,32 +79,44 @@ export default function ChannelInterface({
         </motion.div>
       )}
 
+      {/* Channel Insights Section */}
+      {channelInfo && !loading && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="-mt-3"
+        >
+          <ChannelInsights channelId={channelId} />
+        </motion.div>
+      )}
+
       {/* Bottom Section - Split Content with Fixed Height */}
       {channelInfo && !loading && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
           className="h-[32rem] flex space-x-6"
         >
-          {/* Left Half - Recently Asked */}
+          {/* Left Half - Other Chats */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
-            className="flex-1"
-          >
-            <RecentlyAsked channelId={channelId} />
-          </motion.div>
-
-          {/* Right Half - Version Timeline */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 1.0 }}
             className="flex-1"
           >
-            <VersionTimeline channelId={channelId} />
+            <OtherChats channelId={channelId} />
+          </motion.div>
+
+          {/* Right Half - Collab Channels */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 1.2 }}
+            className="flex-1"
+          >
+            <CollabChannels channelId={channelId} />
           </motion.div>
         </motion.div>
       )}

@@ -8,6 +8,8 @@ interface ChatInputProps {
   placeholder?: string;
   disabled?: boolean;
   onSend?: (message: string) => void;
+  onStop?: () => void;
+  isGenerating?: boolean;
   className?: string;
 }
 
@@ -22,6 +24,8 @@ export default function ChatInput({
   placeholder = "Ask anything about this channel...", 
   disabled = false,
   onSend,
+  onStop,
+  isGenerating = false,
   className = ""
 }: ChatInputProps) {
   const [message, setMessage] = useState('');
@@ -242,19 +246,44 @@ export default function ChatInput({
               </AnimatePresence>
             </motion.button>
 
-            {/* Send Button */}
+            {/* Send/Stop Button */}
             <motion.button
-              type="submit"
-              whileHover={{ scale: message.trim() ? 1.05 : 1 }}
-              whileTap={{ scale: message.trim() ? 0.95 : 1 }}
-              disabled={!message.trim() || disabled}
+              type={isGenerating ? "button" : "submit"}
+              whileHover={{ scale: isGenerating || message.trim() ? 1.05 : 1 }}
+              whileTap={{ scale: isGenerating || message.trim() ? 0.95 : 1 }}
+              disabled={!isGenerating && (!message.trim() || disabled)}
+              onClick={isGenerating ? onStop : undefined}
               className={`p-2.5 rounded-lg transition-all duration-200 flex items-center justify-center ${
-                message.trim() && !disabled
+                isGenerating
+                  ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:shadow-xl hover:from-red-600 hover:to-red-700'
+                  : message.trim() && !disabled
                   ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:shadow-xl hover:from-indigo-600 hover:to-purple-700'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
-              <Send className="w-4 h-4" strokeWidth={2} />
+              <AnimatePresence mode="wait">
+                {isGenerating ? (
+                  <motion.div
+                    key="stop"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="flex items-center justify-center"
+                  >
+                    <Square className="w-4 h-4" fill="currentColor" strokeWidth={0} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="send"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="flex items-center justify-center"
+                  >
+                    <Send className="w-4 h-4" strokeWidth={2} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.button>
           </div>
         </form>
