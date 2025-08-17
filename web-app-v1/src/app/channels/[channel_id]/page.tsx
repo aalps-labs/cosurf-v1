@@ -13,7 +13,7 @@ import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalL
 import FolderTree from '../../../components/FolderTree';
 import ChatInterface from '../../../components/ChatInterface';
 import ChannelInterface from '../../../components/ChannelInterface';
-import VersionTimeline from '../../../components/VersionTimeline';
+import RecentUpdates from '../../../components/RecentUpdates';
 import { useChannelData } from '../../../hooks/useChannelData';
 import type { Document } from '../../../components/FolderTree';
 
@@ -38,7 +38,7 @@ function ChannelContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<'channel' | 'chat'>('channel');
-  const [showVersionTimeline, setShowVersionTimeline] = useState(true);
+  const [showRecentUpdates, setShowRecentUpdates] = useState(true);
   
   // Load channel data (folders and documents)
   const { 
@@ -127,7 +127,7 @@ function ChannelContent() {
         >
           
           {/* Main Content Layout */}
-          <div className="flex min-h-[85vh]">
+          <div className="flex min-h-[75vh]">
             
             {/* Main Dashboard Area */}
             <div className="flex-1 flex flex-col">
@@ -449,17 +449,17 @@ function ChannelContent() {
                 </motion.div>
               </div>
 
-              {/* BOTTOM HALF - Version Timeline with Dropdown */}
+              {/* BOTTOM HALF - Recent Updates with Dropdown */}
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.8, delay: 1.0 }}
                 className="border-t border-gray-100/80"
               >
-                {/* Version Timeline Header with Dropdown Toggle */}
+                {/* Recent Updates Header with Dropdown Toggle */}
                 <motion.div
                   className="px-6 py-4 bg-gradient-to-r from-white/80 to-purple-50/30 backdrop-blur-sm cursor-pointer"
-                  onClick={() => setShowVersionTimeline(!showVersionTimeline)}
+                  onClick={() => setShowRecentUpdates(!showRecentUpdates)}
                   whileHover={{ backgroundColor: "rgba(147, 51, 234, 0.02)" }}
                   transition={{ duration: 0.2 }}
                 >
@@ -468,13 +468,13 @@ function ChannelContent() {
                       <div className="relative">
                         <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-lg blur-sm opacity-20" />
                         <motion.div
-                          animate={{ rotate: showVersionTimeline ? 180 : 0 }}
+                          animate={{ rotate: showRecentUpdates ? 180 : 0 }}
                           transition={{ duration: 0.3, ease: "easeInOut" }}
                         >
                           <ChevronDown className="w-5 h-5 text-purple-600 relative z-10 drop-shadow-sm" strokeWidth={1.5} />
                         </motion.div>
                       </div>
-                      <h3 className="text-sm font-semibold text-gray-800 tracking-wide">Version Timeline</h3>
+                      <h3 className="text-sm font-semibold text-gray-800 tracking-wide">Recent Updates</h3>
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
                         AI Analysis
                       </span>
@@ -482,9 +482,9 @@ function ChannelContent() {
                   </div>
                 </motion.div>
 
-                {/* Expandable Version Timeline Content */}
+                {/* Expandable Recent Updates Content */}
                 <AnimatePresence>
-                  {showVersionTimeline && (
+                  {showRecentUpdates && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
@@ -493,7 +493,7 @@ function ChannelContent() {
                       className="overflow-hidden"
                     >
                       <div className="h-96">
-                        <VersionTimeline channelId={channelId} />
+                        <RecentUpdates channelId={channelId} />
                       </div>
                     </motion.div>
                   )}
@@ -504,6 +504,16 @@ function ChannelContent() {
           </div>
         </motion.div>
       </div>
+      
+      {/* Custom Styles */}
+      <style jsx>{`
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 }

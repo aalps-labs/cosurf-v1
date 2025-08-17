@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GitBranch, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-interface VersionUpdate {
+interface UpdateItem {
   id: string;
   version: string;
   title: string;
@@ -15,160 +15,161 @@ interface VersionUpdate {
   commitHash?: string;
 }
 
-interface VersionTimelineProps {
+interface RecentUpdatesProps {
   channelId: string;
 }
 
 // Mock data - in production this would come from an API
-const mockVersions: VersionUpdate[] = [
+const mockUpdates: UpdateItem[] = [
   {
     id: '1',
     version: 'v2.1.0',
-    title: 'Enhanced Search Algorithm',
-    description: 'Improved search relevance with semantic understanding and better ranking.',
-    timestamp: new Date('2025-08-15T14:30:00Z'),
-    type: 'minor',
+    title: 'Vitalik Reflects on Ethereum\'s 10-Year Journey',
+    description: 'Comprehensive interview covering Ethereum\'s evolution from "world computer" to "world ledger" and future vision.',
+    timestamp: new Date('2025-08-16T14:30:00Z'),
+    type: 'major',
     changes: [
-      'Added semantic search capabilities with vector embeddings',
-      'Improved result ranking algorithm using machine learning',
-      'Enhanced query preprocessing with NLP tokenization',
-      'Implemented real-time search suggestions',
-      'Added support for fuzzy matching and typo correction'
+      'Discussed shift from "world computer" to "world ledger" focus',
+      'Shared perspective on ETH treasury companies and leverage risks',
+      'Emphasized privacy as core network value',
+      'Outlined vision for next decade of development',
+      'Addressed scalability and decentralization balance'
     ],
     commitHash: 'a7b3c9d'
   },
   {
     id: '2',
     version: 'v2.0.5',
-    title: 'Performance Optimizations',
-    description: 'Critical performance improvements and bug fixes for better user experience.',
-    timestamp: new Date('2025-08-12T09:15:00Z'),
-    type: 'patch',
+    title: 'Ronin Network Migrates Back to Ethereum L2',
+    description: 'Axie Infinity\'s Ronin Network announces migration back to Ethereum as Layer 2 solution.',
+    timestamp: new Date('2025-08-15T09:15:00Z'),
+    type: 'minor',
     changes: [
-      'Reduced search latency by 40% through caching optimization',
-      'Fixed memory leak in document processing pipeline',
-      'Optimized database queries with proper indexing',
-      'Implemented connection pooling for better resource management',
-      'Added performance monitoring and alerting system'
+      'Ronin Network chooses Ethereum for enhanced security',
+      'Migration demonstrates L2 ecosystem improvements',
+      'Axie Infinity benefits from Ethereum\'s infrastructure',
+      'Validates Ethereum\'s scalability solutions',
+      'Strengthens gaming ecosystem on Ethereum'
     ],
     commitHash: 'f2e8a1b'
   },
   {
     id: '3',
     version: 'v2.0.0',
-    title: 'Major Architecture Overhaul',
-    description: 'Complete rewrite of the core engine with modern technologies and improved scalability.',
-    timestamp: new Date('2025-08-08T16:45:00Z'),
-    type: 'major',
+    title: 'Vitalik Explores AI and Cryptocurrency Intersection',
+    description: 'Comprehensive blog post outlining four key areas where AI and crypto converge.',
+    timestamp: new Date('2025-08-13T16:45:00Z'),
+    type: 'minor',
     changes: [
-      'Migrated to microservices architecture with Docker containers',
-      'Implemented real-time indexing with Apache Kafka streams',
-      'Added multi-language support for 15+ languages',
-      'New user interface design with modern React components',
-      'Introduced API versioning and backward compatibility',
-      'Added comprehensive logging and distributed tracing'
+      'AI as a player in crypto games and protocols',
+      'AI as interface for improved user experience',
+      'AI as rules engine for smart contracts',
+      'AI as ultimate goal for decentralized systems',
+      'Forward-thinking approach to technology evolution'
     ],
     commitHash: '9c4d7e2'
   },
   {
     id: '4',
     version: 'v1.9.8',
-    title: 'Security Patch',
-    description: 'Critical security updates and vulnerability fixes.',
-    timestamp: new Date('2025-08-05T11:20:00Z'),
-    type: 'hotfix',
+    title: 'SocialFi Gains Traction on Base Layer 2',
+    description: 'Coinbase\'s Base network sees surge in Social Finance applications and user activity.',
+    timestamp: new Date('2025-08-12T11:20:00Z'),
+    type: 'minor',
     changes: [
-      'Fixed critical authentication bypass vulnerability (CVE-2025-1234)',
-      'Updated all dependencies with latest security patches',
-      'Enhanced input validation and sanitization across all endpoints',
-      'Implemented rate limiting to prevent abuse',
-      'Added security headers and CSRF protection'
+      'Tokenized social interactions gaining popularity',
+      'Content creation monetization through SocialFi',
+      'Base network activity surge demonstrates L2 success',
+      'Innovation in social finance applications',
+      'Growing Ethereum L2 ecosystem diversity'
     ],
     commitHash: '3b9f5a8'
   },
   {
     id: '5',
     version: 'v1.9.0',
-    title: 'Analytics Dashboard',
-    description: 'New analytics and reporting features for better insights.',
-    timestamp: new Date('2025-08-01T13:10:00Z'),
-    type: 'minor',
+    title: 'Vitalik Buterin Reclaims Billionaire Status',
+    description: 'ETH price surge pushes Vitalik\'s holdings back above $1 billion milestone.',
+    timestamp: new Date('2025-08-09T13:10:00Z'),
+    type: 'major',
     changes: [
-      'Added comprehensive analytics dashboard with real-time metrics',
-      'Implemented detailed usage tracking and user behavior analysis',
-      'Created custom report builder with export functionality',
-      'Added data visualization charts and graphs',
-      'Implemented A/B testing framework for feature experiments'
+      'ETH holdings surpass billion-dollar valuation',
+      'Reflects broader Ethereum ecosystem growth',
+      'Demonstrates long-term value creation',
+      'Milestone attracts mainstream financial attention',
+      'Validates Ethereum\'s fundamental strength'
     ],
     commitHash: '7e1c4d9'
   },
   {
     id: '6',
     version: 'v1.8.3',
-    title: 'Bug Fixes and Improvements',
-    description: 'Various bug fixes and minor improvements for stability.',
-    timestamp: new Date('2025-07-28T10:30:00Z'),
-    type: 'patch',
+    title: 'Ethereum Price Soars 51.68% in Monthly Rally',
+    description: 'ETH reaches $4,486.75, significantly outpacing Bitcoin with market dominance climbing to 13.62%.',
+    timestamp: new Date('2025-08-05T10:30:00Z'),
+    type: 'major',
     changes: [
-      'Fixed search result pagination edge cases and infinite scroll',
-      'Improved error handling with user-friendly error messages',
-      'Updated UI components to latest design system standards',
-      'Fixed responsive layout issues on mobile devices',
-      'Optimized bundle size by removing unused dependencies'
+      'ETH price surge of 51.68% over the month',
+      'Outperformed Bitcoin\'s modest 1.70% gain',
+      'Market dominance increased to 13.62%',
+      'Strong institutional and retail investor interest',
+      'Positive regulatory environment driving growth'
     ],
     commitHash: '5f2a8c1'
   },
   {
     id: '7',
     version: 'v1.8.0',
-    title: 'Multi-tenant Support',
-    description: 'Added support for multiple organizations and improved user management.',
-    timestamp: new Date('2025-07-22T14:20:00Z'),
-    type: 'minor',
+    title: 'Pro-Crypto SEC Reforms Announced',
+    description: 'U.S. Securities and Exchange Commission announces favorable regulatory reforms for cryptocurrency sector.',
+    timestamp: new Date('2025-07-31T14:20:00Z'),
+    type: 'major',
     changes: [
-      'Implemented organization-based access control',
-      'Added user role management',
-      'Enhanced data isolation'
+      'SEC announces comprehensive pro-crypto reforms',
+      'Ethereum positioned as key U.S. financial infrastructure',
+      'Regulatory clarity boosts institutional confidence',
+      'Market reacts positively with immediate ETH gains',
+      'Sets foundation for broader crypto adoption'
     ],
     commitHash: '8d3b7f4'
   },
   {
     id: '8',
     version: 'v1.7.2',
-    title: 'Critical Security Fix',
-    description: 'Emergency patch for security vulnerability.',
-    timestamp: new Date('2025-07-18T08:45:00Z'),
-    type: 'hotfix',
+    title: 'Ethereum ETFs See Record $2.12B Daily Inflows',
+    description: 'Historic single-day inflow of $2.12 billion into Ethereum ETFs, vastly exceeding Bitcoin\'s $138M.',
+    timestamp: new Date('2025-07-21T08:45:00Z'),
+    type: 'major',
     changes: [
-      'Fixed SQL injection vulnerability',
-      'Updated authentication middleware',
-      'Enhanced request validation'
+      'Record-breaking $2.12 billion daily ETF inflows',
+      'Significantly outpaced Bitcoin ETF performance',
+      'Institutional confidence in Ethereum reaches new heights',
+      'ETF success validates Ethereum investment thesis',
+      'Sets stage for sustained bullish momentum'
     ],
     commitHash: '2a9c5e7'
   }
 ];
 
-const getTypeColor = (type: VersionUpdate['type']) => {
+const getTypeColor = (type: UpdateItem['type']) => {
   return 'from-purple-500 to-indigo-500';
 };
 
-const getTypeIcon = (type: VersionUpdate['type']) => {
+const getTypeIcon = (type: UpdateItem['type']) => {
   return <GitBranch className="w-3 h-3" />;
 };
 
-
-
-export default function VersionTimeline({ channelId }: VersionTimelineProps) {
-  const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set());
+export default function RecentUpdates({ channelId }: RecentUpdatesProps) {
+  const [expandedUpdates, setExpandedUpdates] = useState<Set<string>>(new Set());
   const [showPulse, setShowPulse] = useState(true);
 
-  const toggleExpanded = (versionId: string) => {
-    setExpandedVersions(prev => {
+  const toggleExpanded = (updateId: string) => {
+    setExpandedUpdates(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(versionId)) {
-        newSet.delete(versionId);
+      if (newSet.has(updateId)) {
+        newSet.delete(updateId);
       } else {
-        newSet.add(versionId);
+        newSet.add(updateId);
       }
       return newSet;
     });
@@ -185,7 +186,7 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
 
   return (
     <div className="h-full bg-gradient-to-br from-gray-50 to-blue-50/30 border border-gray-200/60 rounded-xl shadow-sm backdrop-blur-sm flex flex-col">
-      {/* Timeline Content */}
+      {/* Recent Updates Content */}
       <div className="flex-1 min-h-0 p-4">
         <div className="h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
           <div className="p-2">
@@ -193,11 +194,11 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
             {/* Main Timeline Line */}
             <div className="absolute left-4 top-0 bottom-4 w-0.5 bg-gradient-to-b from-purple-200 via-purple-300 to-indigo-200" />
             
-            {/* Timeline Items */}
+            {/* Recent Update Items */}
             <div className="space-y-3 pb-4">
-            {mockVersions.map((version, index) => (
+            {mockUpdates.map((update, index) => (
               <motion.div
-                key={version.id}
+                key={update.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -207,12 +208,10 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
                 <div className="relative z-10 flex-shrink-0 flex flex-col items-center">
                   <motion.div
                     whileHover={{ scale: 1.1 }}
-                    className={`w-8 h-8 rounded-full bg-gradient-to-br ${getTypeColor(version.type)} shadow-md flex items-center justify-center text-white`}
+                    className={`w-8 h-8 rounded-full bg-gradient-to-br ${getTypeColor(update.type)} shadow-md flex items-center justify-center text-white`}
                   >
-                    {getTypeIcon(version.type)}
+                    {getTypeIcon(update.type)}
                   </motion.div>
-                  
-
                   
                   {/* Connection Line to Content */}
                   <div className="absolute top-4 left-8 w-3 h-0.5 bg-gradient-to-r from-gray-300 to-transparent" />
@@ -247,19 +246,19 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
                     {/* Title and Date Row */}
                     <div className="flex items-center justify-between mb-1">
                       <h4 className="text-sm font-semibold text-gray-900 leading-tight">
-                        {version.title}
+                        {update.title}
                       </h4>
                       
                       <div className="px-1.5 py-0.5 bg-purple-100 rounded text-purple-700 ml-2 flex-shrink-0">
                         <span className="text-xs font-medium">
-                          {version.timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {update.timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
                       </div>
                     </div>
                     
                     {/* Description Full Width */}
                     <p className="text-xs text-gray-600 leading-snug">
-                      {version.description}
+                      {update.description}
                     </p>
                   </div>
 
@@ -268,11 +267,11 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => toggleExpanded(version.id)}
+                      onClick={() => toggleExpanded(update.id)}
                       className="flex items-center space-x-1 text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors duration-200"
                     >
                       <span>View Details</span>
-                      {expandedVersions.has(version.id) ? (
+                      {expandedUpdates.has(update.id) ? (
                         <ChevronUp className="w-3 h-3" />
                       ) : (
                         <ChevronDown className="w-3 h-3" />
@@ -281,7 +280,7 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
                     
                     {/* Expandable Changes List */}
                     <AnimatePresence>
-                      {expandedVersions.has(version.id) && (
+                      {expandedUpdates.has(update.id) && (
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
@@ -290,9 +289,9 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
                           className="overflow-hidden"
                         >
                           <div className="mt-2">
-                            <div className="text-xs font-medium text-gray-700 mb-1">Changes:</div>
+                            <div className="text-xs font-medium text-gray-700 mb-1">Key Updates:</div>
                             <ul className="space-y-1">
-                              {version.changes.map((change, changeIndex) => (
+                              {update.changes.map((change, changeIndex) => (
                                 <motion.li
                                   key={changeIndex}
                                   initial={{ opacity: 0, x: -10 }}
@@ -310,7 +309,6 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
                       )}
                     </AnimatePresence>
                   </div>
-
 
                 </motion.div>
               </motion.div>
