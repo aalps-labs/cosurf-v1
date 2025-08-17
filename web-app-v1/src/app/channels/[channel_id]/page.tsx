@@ -8,12 +8,14 @@ import DataProvider from '../../../components/auth/DataProvider';
 import LoginTriggerProvider from '../../../components/auth/LoginTriggerContext';
 import Header from '../../../components/Header';
 import { useUserData } from '../../../components/auth/DataProvider';
-import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalLink, Coins } from 'lucide-react';
+import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalLink, Coins, DollarSign, BarChart3, Brain } from 'lucide-react';
 import FolderTree from '../../../components/FolderTree';
 import ChatInterface from '../../../components/ChatInterface';
 import ChannelInterface from '../../../components/ChannelInterface';
 import { useChannelData } from '../../../hooks/useChannelData';
 import type { Document } from '../../../components/FolderTree';
+import { useX402Client } from '../../../lib/x402-client';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface ChannelInfo {
   id: string;
@@ -36,6 +38,19 @@ function ChannelContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<'channel' | 'chat'>('channel');
+  
+  // Privy and x402 integration
+  const { authenticated } = usePrivy();
+  const { 
+    client, 
+    makePaymentRequest, 
+    isClientReady
+  } = useX402Client();
+  
+  // Payment state
+  const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
+  const [paymentResults, setPaymentResults] = useState<Record<string, any>>({});
+  const [paymentErrors, setPaymentErrors] = useState<Record<string, string>>({});
   
   // Load channel data (folders and documents)
   const { 
@@ -103,6 +118,76 @@ function ChannelContent() {
   const handleViewSwitch = (view: 'channel' | 'chat') => {
     setCurrentView(view);
   };
+
+  // Payment request handler
+  const makePayment = async (endpoint: string, method: string = 'GET', data?: unknown) => {
+    console.log('makePayment called:', { endpoint, method, authenticated, isClientReady, hasClient: !!client });
+    
+    if (!authenticated) {
+      setPaymentErrors(prev => ({ ...prev, [endpoint]: 'Please connect your wallet first to make payments.' }));
+      return;
+    }
+
+    if (!isClientReady) {
+      setPaymentErrors(prev => ({ ...prev, [endpoint]: 'Wallet not ready. Please ensure your wallet is connected and try again.' }));
+      return;
+    }
+
+    if (!client) {
+      setPaymentErrors(prev => ({ ...prev, [endpoint]: 'Payment client not initialized. Please refresh the page and try again.' }));
+      return;
+    }
+
+    const key = `${method}-${endpoint}`;
+    setPaymentLoading(key);
+    
+    // Clear previous results and errors
+    setPaymentErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[endpoint];
+      return newErrors;
+    });
+    
+    setPaymentResults(prev => {
+      const newResults = { ...prev };
+      delete newResults[endpoint];
+      return newResults;
+    });
+
+    try {
+      console.log('About to call makePaymentRequest:', { endpoint, method });
+      const result = await makePaymentRequest(endpoint, { method, data });
+      console.log('Payment request successful:', result);
+      setPaymentResults(prev => ({ ...prev, [endpoint]: result }));
+    } catch (error: unknown) {
+      console.error('Payment request failed:', error);
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: { error?: string } } };
+        if (axiosError.response?.status !== 402) {
+          const errorMessage = axiosError.response?.data?.error || 'Unknown error occurred';
+          setPaymentErrors(prev => ({ ...prev, [endpoint]: errorMessage }));
+        }
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        setPaymentErrors(prev => ({ ...prev, [endpoint]: errorMessage }));
+      }
+    } finally {
+      setPaymentLoading(null);
+    }
+  };
+
+  const getCostForEndpoint = (endpoint: string): string => {
+    const costs: Record<string, string> = {
+      '/api/premium': '$0.01',
+      '/api/analytics': '$0.05',
+      '/api/ai-insights': '$0.10',
+      'https://x402.payai.network/api/base-sepolia/paid-content': '$0.01'
+    };
+    return costs[endpoint] || 'Unknown';
+  };
+
+  const isPaymentLoading = (endpoint: string) => paymentLoading === `GET-${endpoint}`;
 
   return (
     <div className="min-h-screen bg-white">
@@ -315,6 +400,179 @@ function ChannelContent() {
                   </div>
                 ) : (
                   <h1 className="text-lg font-medium text-gray-900">{channelId}</h1>
+                )}
+              </motion.div>
+              
+              {/* PAYMENT BUTTONS - x402 API Access */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="border-b border-gray-50 px-6 py-4 bg-gradient-to-r from-indigo-50/30 to-purple-50/30"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-700">Premium API Access</h3>
+                  {!authenticated && (
+                    <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                      Connect wallet to enable payments
+                    </span>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-4 gap-3">
+                  {/* Premium Content Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.02, y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => makePayment('/api/premium', 'GET')}
+                    disabled={!authenticated || !isClientReady || isPaymentLoading('/api/premium')}
+                    className="flex items-center justify-between p-3 bg-white border border-green-200 rounded-lg hover:border-green-300 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 group"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <DollarSign className="w-4 h-4 text-green-600 group-hover:text-green-700" strokeWidth={2} />
+                      <div className="text-left">
+                        <div className="text-sm font-medium text-gray-900">Premium</div>
+                        <div className="text-xs text-gray-500">Market data</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-green-600">$0.01</div>
+                      <div className="text-xs text-gray-400">USDC</div>
+                    </div>
+                    {isPaymentLoading('/api/premium') && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-lg">
+                        <RefreshCw className="w-4 h-4 animate-spin text-green-600" />
+                      </div>
+                    )}
+                  </motion.button>
+
+                  {/* Analytics Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.02, y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => makePayment('/api/analytics', 'GET')}
+                    disabled={!authenticated || !isClientReady || isPaymentLoading('/api/analytics')}
+                    className="flex items-center justify-between p-3 bg-white border border-purple-200 rounded-lg hover:border-purple-300 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 group relative"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <BarChart3 className="w-4 h-4 text-purple-600 group-hover:text-purple-700" strokeWidth={2} />
+                      <div className="text-left">
+                        <div className="text-sm font-medium text-gray-900">Analytics</div>
+                        <div className="text-xs text-gray-500">Advanced metrics</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-purple-600">$0.05</div>
+                      <div className="text-xs text-gray-400">USDC</div>
+                    </div>
+                    {isPaymentLoading('/api/analytics') && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-lg">
+                        <RefreshCw className="w-4 h-4 animate-spin text-purple-600" />
+                      </div>
+                    )}
+                  </motion.button>
+
+                  {/* AI Insights Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.02, y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => makePayment('/api/ai-insights', 'GET')}
+                    disabled={!authenticated || !isClientReady || isPaymentLoading('/api/ai-insights')}
+                    className="flex items-center justify-between p-3 bg-white border border-orange-200 rounded-lg hover:border-orange-300 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 group relative"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Brain className="w-4 h-4 text-orange-600 group-hover:text-orange-700" strokeWidth={2} />
+                      <div className="text-left">
+                        <div className="text-sm font-medium text-gray-900">AI Insights</div>
+                        <div className="text-xs text-gray-500">AI predictions</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-orange-600">$0.10</div>
+                      <div className="text-xs text-gray-400">USDC</div>
+                    </div>
+                    {isPaymentLoading('/api/ai-insights') && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-lg">
+                        <RefreshCw className="w-4 h-4 animate-spin text-orange-600" />
+                      </div>
+                    )}
+                  </motion.button>
+                  
+                  {/* Test x402 Echo Server Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.02, y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      // Use the x402 echo server for testing
+                      const testEndpoint = 'https://x402.payai.network/api/base-sepolia/paid-content';
+                      makePayment(testEndpoint, 'GET');
+                    }}
+                    disabled={!authenticated || !isClientReady || isPaymentLoading('https://x402.payai.network/api/base-sepolia/paid-content')}
+                    className="flex items-center justify-between p-3 bg-white border border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 group relative"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Circle className="w-4 h-4 text-blue-600 group-hover:text-blue-700" strokeWidth={2} />
+                      <div className="text-left">
+                        <div className="text-sm font-medium text-gray-900">Test x402</div>
+                        <div className="text-xs text-gray-500">Echo server</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-blue-600">$0.01</div>
+                      <div className="text-xs text-gray-400">USDC</div>
+                    </div>
+                    {isPaymentLoading('https://x402.payai.network/api/base-sepolia/paid-content') && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-lg">
+                        <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                      </div>
+                    )}
+                  </motion.button>
+                </div>
+
+                {/* Payment Results/Errors */}
+                {Object.keys(paymentResults).length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {Object.entries(paymentResults).map(([endpoint, result]) => (
+                      <motion.div
+                        key={endpoint}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="p-3 bg-green-50 border border-green-200 rounded-lg"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-green-800">
+                            ✅ {endpoint} - Success
+                          </span>
+                          <span className="text-xs text-green-600">
+                            Cost: {getCostForEndpoint(endpoint)}
+                          </span>
+                        </div>
+                        <pre className="text-xs text-green-700 bg-green-100 p-2 rounded overflow-auto max-h-32">
+                          {JSON.stringify(result.data, null, 2)}
+                        </pre>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
+                {Object.keys(paymentErrors).length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {Object.entries(paymentErrors)
+                      .filter(([, error]) => error && error.trim() !== '')
+                      .map(([endpoint, error]) => (
+                        <motion.div
+                          key={endpoint}
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          className="p-3 bg-red-50 border border-red-200 rounded-lg"
+                        >
+                          <span className="text-sm font-medium text-red-800">
+                            ❌ {endpoint} - Error
+                          </span>
+                          <p className="text-xs text-red-700 mt-1">{error}</p>
+                        </motion.div>
+                      ))}
+                  </div>
                 )}
               </motion.div>
               

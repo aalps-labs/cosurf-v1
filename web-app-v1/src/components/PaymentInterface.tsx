@@ -14,35 +14,7 @@ interface PaymentResult {
   cost?: string;
 }
 
-interface BazaarService {
-  resource: string;
-  type: string;
-  x402Version: number;
-  lastUpdated: string;
-  metadata: Record<string, unknown>;
-  accepts: Array<{
-    asset: string;
-    description: string;
-    extra: {
-      name: string;
-      version?: string;
-    };
-    maxAmountRequired: string;
-    maxTimeoutSeconds: number;
-    mimeType: string;
-    network: string;
-    outputSchema: {
-      input: {
-        method: string;
-        type: string;
-      };
-      output: unknown;
-    };
-    payTo: string;
-    resource: string;
-    scheme: string;
-  }>;
-}
+
 
 export default function PaymentInterface() {
   // Privy integration
@@ -61,9 +33,7 @@ export default function PaymentInterface() {
   const [loading, setLoading] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, PaymentResult>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [bazaarServices, setBazaarServices] = useState<BazaarService[]>([]);
-  const [bazaarLoading, setBazaarLoading] = useState(false);
-  const [bazaarError, setBazaarError] = useState<string>('');
+
 
   const makeRequest = async (endpoint: string, method: string = 'GET', data?: unknown) => {
     // Check if wallet is connected and client is ready
@@ -112,7 +82,7 @@ export default function PaymentInterface() {
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { status?: number; data?: { error?: string } } };
         if (axiosError.response?.status !== 402) {
-          const errorMessage = axiosError.response?.data?.error || (error as Error).message || 'Unknown error occurred';
+          const errorMessage = axiosError.response?.data?.error || 'Unknown error occurred';
           setErrors(prev => ({ ...prev, [key]: errorMessage }));
         }
       } else {
@@ -135,124 +105,7 @@ export default function PaymentInterface() {
 
   const isLoading = (key: string) => loading === key;
 
-  // Bazaar discovery functionality using direct CDP API
-  const discoverServices = async () => {
-    setBazaarLoading(true);
-    setBazaarError('');
-    try {
-      // Get CDP API credentials from environment variables
-      const cdpApiKeyId = process.env.NEXT_PUBLIC_CDP_API_KEY_ID;
-      const cdpApiKeySecret = process.env.NEXT_PUBLIC_CDP_API_KEY_SECRET;
-      
-      if (!cdpApiKeyId || !cdpApiKeySecret) {
-        throw new Error('CDP API credentials not found. Please check NEXT_PUBLIC_CDP_API_KEY_ID and NEXT_PUBLIC_CDP_API_KEY_SECRET in environment variables.');
-      }
 
-      // Create Basic authentication header (Base64 encoded)
-      const credentials = btoa(`${cdpApiKeyId}:${cdpApiKeySecret}`);
-      
-      const response = await fetch('https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Basic ${credentials}`,
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please verify your CDP API credentials are correct and have x402 permissions.');
-        }
-        throw new Error(`Failed to fetch services: ${response.status} - ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Discovery response:', data);
-      
-      // Find services under $0.10 (optional filtering)
-      const usdcAsset = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
-      const maxPrice = 100000; // $0.10 in atomic units (USDC has 6 decimals)
-      
-      const allServices = data.items || [];
-      // Uncomment below if you want to filter by price
-      // const affordableServices = allServices.filter((item: BazaarService) => 
-      //   item.accepts.find(paymentRequirements => 
-      //     paymentRequirements.asset === usdcAsset && 
-      //     Number(paymentRequirements.maxAmountRequired) < maxPrice
-      //   )
-      // );
-      
-      // Set all services for demo (can switch to affordableServices if needed)
-      setBazaarServices(allServices);
-    } catch (error: unknown) {
-      console.error('Failed to discover services:', error);
-      setBazaarError(error instanceof Error ? error.message : 'Failed to discover services');
-    } finally {
-      setBazaarLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    discoverServices();
-  }, []);
-
-  const formatPrice = (maxAmountRequired: string, assetName: string, decimals: number = 6) => {
-    const amount = Number(maxAmountRequired) / Math.pow(10, decimals);
-    return `$${amount.toFixed(decimals === 6 ? 2 : 4)} ${assetName}`;
-  };
-
-  const callBazaarService = async (service: BazaarService) => {
-    const acceptedPayment = service.accepts[0];
-    if (!acceptedPayment) return;
-
-    const key = `BAZAAR-${service.resource}`;
-    setLoading(key);
-    
-    // Clear previous results and errors for this key
-    setErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[key];
-      return newErrors;
-    });
-    
-    setResults(prev => {
-      const newResults = { ...prev };
-      delete newResults[key];
-      return newResults;
-    });
-
-    try {
-      if (!authenticated || !isReady || !client) {
-        throw new Error('Wallet not connected or ready');
-      }
-
-      const result = await makePaymentRequest(acceptedPayment.resource, {
-        method: acceptedPayment.outputSchema.input.method || 'GET'
-      });
-
-      setResults(prev => ({ 
-        ...prev, 
-        [key]: {
-          ...result,
-          cost: formatPrice(acceptedPayment.maxAmountRequired, acceptedPayment.extra.name)
-        }
-      }));
-
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { status?: number; data?: { error?: string } } };
-        if (axiosError.response?.status !== 402) {
-          const errorMessage = axiosError.response?.data?.error || (error as Error).message || 'Unknown error occurred';
-          setErrors(prev => ({ ...prev, [key]: errorMessage }));
-        }
-      } else {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        setErrors(prev => ({ ...prev, [key]: errorMessage }));
-      }
-    } finally {
-      setLoading(null);
-    }
-  };
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
@@ -317,78 +170,7 @@ export default function PaymentInterface() {
         </div>
       </div>
 
-      {/* Bazaar Discovery Section */}
-      <div className="border rounded-lg p-6 bg-gradient-to-r from-purple-50 to-blue-50">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">🏪 x402 Bazaar</h2>
-            <p className="text-gray-600">Discover available x402-enabled services</p>
-          </div>
-          <button
-            onClick={discoverServices}
-            disabled={bazaarLoading}
-            className="bg-purple-500 hover:bg-purple-600 disabled:bg-purple-300 text-white font-medium py-2 px-4 rounded transition-colors"
-          >
-            {bazaarLoading ? 'Discovering...' : 'Refresh Services'}
-          </button>
-        </div>
 
-        {bazaarError && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-200 rounded text-red-700">
-            Error discovering services: {bazaarError}
-          </div>
-        )}
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-          {bazaarServices.map((service) => {
-            const payment = service.accepts[0];
-            const key = `BAZAAR-${service.resource}`;
-            
-            return (
-              <div key={key} className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-sm text-gray-900 truncate">
-                      {new URL(service.resource).hostname}
-                    </h3>
-                    <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded">
-                      {payment?.network || 'unknown'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600 mb-2">{service.resource}</p>
-                  {payment && (
-                    <p className="text-sm font-bold text-green-600">
-                      {formatPrice(payment.maxAmountRequired, payment.extra.name)}
-                    </p>
-                  )}
-                </div>
-                
-                <div className="mb-3">
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <div>Method: {payment?.outputSchema?.input?.method || 'GET'}</div>
-                    <div>Type: {service.type}</div>
-                    {payment?.description && <div>Desc: {payment.description}</div>}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => callBazaarService(service)}
-                  disabled={!authenticated || !isReady || isLoading(key) || !payment}
-                  className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 text-white font-medium py-2 px-3 rounded text-sm transition-colors"
-                >
-                  {isLoading(key) ? 'Calling...' : 'Try Service'}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        {bazaarServices.length === 0 && !bazaarLoading && !bazaarError && (
-          <div className="text-center text-gray-500 py-8">
-            No services discovered yet. Click &quot;Refresh Services&quot; to discover available x402 services.
-          </div>
-        )}
-      </div>
 
       {/* API Endpoints */}
       <div className="grid md:grid-cols-3 gap-6">
@@ -475,14 +257,14 @@ export default function PaymentInterface() {
                 </pre>
               </div>
               
-              {result.paymentResponse && (
+              {result.paymentResponse ? (
                 <div>
                   <h4 className="font-medium text-gray-700">Payment Details:</h4>
                   <pre className="mt-1 p-3 bg-white rounded border text-sm overflow-auto">
                     {JSON.stringify(result.paymentResponse, null, 2)}
                   </pre>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         ))}
