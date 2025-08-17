@@ -33,6 +33,9 @@ export default function ChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // Fixed model - Gemini 2.5 Flash
+  const selectedModel = 'gemini-2.5-flash';
+
   // Initialize with a new session if none exists
   useEffect(() => {
     if (!currentSession) {
@@ -59,24 +62,127 @@ export default function ChatInterface({
 
     const updatedMessages = [...messages, userMessage];
     updateSession(currentSession.id, updatedMessages);
-    setIsAssistantTyping(true);
 
-    // Simulate AI response (replace with actual API call)
-    setTimeout(() => {
+    try {
+      // Create assistant message with streaming placeholder
+      const assistantMessageId = `assistant-${Date.now()}`;
       const assistantMessage: Message = {
+        id: assistantMessageId,
+        content: '',
+        sender: 'assistant',
+        timestamp: new Date(),
+        isTyping: true
+      };
+
+      const messagesWithAssistant = [...updatedMessages, assistantMessage];
+      updateSession(currentSession.id, messagesWithAssistant);
+
+      // Call streaming API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: `You are an AI assistant helping with questions about ${channelName}. Please provide helpful and contextual responses.\n\nUser question: ${content}`,
+          model: selectedModel,
+          temperature: 0.7,
+          stream: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      let accumulatedContent = '';
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.trim() && line.startsWith('0:')) {
+            try {
+              const content = JSON.parse(line.slice(2));
+              accumulatedContent += content;
+
+              // Update the assistant message with accumulated content
+              const currentMessages = [...updatedMessages];
+              const assistantIndex = currentMessages.findIndex(msg => msg.id === assistantMessageId);
+              
+              if (assistantIndex === -1) {
+                currentMessages.push({
+                  id: assistantMessageId,
+                  content: accumulatedContent,
+                  sender: 'assistant',
+                  timestamp: new Date(),
+                  isTyping: true
+                });
+              } else {
+                currentMessages[assistantIndex] = {
+                  ...currentMessages[assistantIndex],
+                  content: accumulatedContent,
+                  isTyping: true
+                };
+              }
+
+              updateSession(currentSession.id, currentMessages);
+            } catch (e) {
+              console.error('Error parsing chunk:', e);
+            }
+          }
+        }
+      }
+
+      // Mark streaming as complete
+      const finalMessages = [...updatedMessages];
+      const assistantIndex = finalMessages.findIndex(msg => msg.id === assistantMessageId);
+      
+      if (assistantIndex !== -1) {
+        finalMessages[assistantIndex] = {
+          ...finalMessages[assistantIndex],
+          content: accumulatedContent,
+          isTyping: false
+        };
+      } else {
+        finalMessages.push({
+          id: assistantMessageId,
+          content: accumulatedContent,
+          sender: 'assistant',
+          timestamp: new Date(),
+          isTyping: false
+        });
+      }
+
+      updateSession(currentSession.id, finalMessages);
+
+    } catch (error) {
+      console.error('Error calling chat API:', error);
+      
+      // Add error message
+      const errorMessage: Message = {
         id: `assistant-${Date.now()}`,
-        content: `I understand you're asking about "${content}". This is a simulated response for channel ${channelName}. In a real implementation, this would connect to your AI backend to provide contextual answers based on the channel's content.`,
+        content: `Sorry, I encountered an error while processing your request. Please try again.`,
         sender: 'assistant',
         timestamp: new Date()
       };
 
-      const finalMessages = [...updatedMessages, assistantMessage];
-      updateSession(currentSession.id, finalMessages);
-      setIsAssistantTyping(false);
-    }, 1500);
+      const errorMessages = [...updatedMessages, errorMessage];
+      updateSession(currentSession.id, errorMessages);
+    }
   };
 
-  const handleEditMessage = (messageId: string, newContent: string) => {
+  const handleEditMessage = async (messageId: string, newContent: string) => {
     if (!currentSession) return;
 
     // Find the index of the message being edited
@@ -95,21 +201,9 @@ export default function ChatInterface({
     // Set the new message list and trigger new AI response
     const messagesWithEdit = [...updatedMessages, editedMessage];
     updateSession(currentSession.id, messagesWithEdit);
-    setIsAssistantTyping(true);
-
-    // Generate new AI response for the edited message
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        content: `I understand you're asking about "${newContent}". This is a simulated response for channel ${channelName}. In a real implementation, this would connect to your AI backend to provide contextual answers based on the channel's content.`,
-        sender: 'assistant',
-        timestamp: new Date()
-      };
-
-      const finalMessages = [...messagesWithEdit, assistantMessage];
-      updateSession(currentSession.id, finalMessages);
-      setIsAssistantTyping(false);
-    }, 1500);
+    
+    // Trigger new streaming response for the edited message
+    await handleSendMessage(newContent);
   };
 
   // Handle new chat creation
@@ -160,24 +254,6 @@ export default function ChatInterface({
               )}
             </motion.div>
           ))}
-        </AnimatePresence>
-
-        {/* Typing Indicator */}
-        <AnimatePresence>
-          {isAssistantTyping && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="mb-6"
-            >
-              <div className="flex items-center gap-2 text-gray-500">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">AI is thinking...</span>
-              </div>
-            </motion.div>
-          )}
         </AnimatePresence>
 
         <div ref={messagesEndRef} />
