@@ -1,0 +1,172 @@
+'use client';
+
+import { usePrivy } from '@privy-io/react-auth';
+import { useEffect, useState } from 'react';
+
+interface LoginModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface AuthState {
+  loading: boolean;
+  message: string;
+  error: string;
+  success: boolean;
+}
+
+export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
+  const { login, authenticated, user, ready, getAccessToken } = usePrivy();
+  const [authState, setAuthState] = useState<AuthState>({
+    loading: false,
+    message: '',
+    error: '',
+    success: false
+  });
+  const [isPrivyModalOpen, setIsPrivyModalOpen] = useState(false);
+
+  // Handle successful authentication - show success state
+  useEffect(() => {
+    if (authenticated && user && ready && isOpen) {
+      console.log('✅ Privy authentication successful in LoginModal');
+      setAuthState({
+        loading: false,
+        message: 'Authentication successful! Setting up your account...',
+        error: '',
+        success: true
+      });
+      setIsPrivyModalOpen(false);
+    }
+  }, [authenticated, user, ready, isOpen]);
+
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      setAuthState({ loading: false, message: '', error: '', success: false });
+      setIsPrivyModalOpen(false);
+    }
+  }, [isOpen]);
+
+  // Detect when Privy modal is dismissed without authentication
+  useEffect(() => {
+    if (isPrivyModalOpen && !authenticated && ready) {
+      // Set a timeout to check if user cancelled Privy modal
+      const timeout = setTimeout(() => {
+        if (!authenticated && authState.loading && isPrivyModalOpen) {
+          setAuthState(prev => ({ 
+            ...prev, 
+            loading: false,
+            error: ''
+          }));
+          setIsPrivyModalOpen(false);
+        }
+      }, 3000); // 3 second timeout to allow for network delays
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isPrivyModalOpen, authenticated, ready, authState.loading]);
+
+  // Removed handleUserLogin - now using channel connection modal flow
+
+  const handleLoginClick = async () => {
+    try {
+      // Reset state and show loading
+      setAuthState({ loading: true, message: '', error: '', success: false });
+      setIsPrivyModalOpen(true);
+      await login();
+    } catch (error) {
+      console.error('Login error:', error);
+      setAuthState({
+        loading: false,
+        message: '',
+        error: 'Login failed. Please try again.',
+        success: false
+      });
+      setIsPrivyModalOpen(false);
+    }
+  };
+
+
+
+  const handleClose = () => {
+    // Reset all state when closing
+    setAuthState({ loading: false, message: '', error: '', success: false });
+    setIsPrivyModalOpen(false);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900">
+            Access Premium Features
+          </h2>
+          <button 
+            onClick={handleClose}
+            className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+            type="button"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        {!authenticated ? (
+          <div>
+            <p className="text-gray-600 mb-6">
+              Login to access AI insights, analytics, and premium content with instant USDC payments.
+            </p>
+            
+            {authState.error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                {authState.error}
+              </div>
+            )}
+            
+            <button 
+              onClick={handleLoginClick}
+              disabled={authState.loading}
+              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+            >
+              {authState.loading ? 'Connecting...' : 'Login with Privy'}
+            </button>
+            
+            <p className="text-xs text-gray-500 mt-3 text-center">
+              Supports email, wallet, Google, Twitter, and more
+            </p>
+          </div>
+        ) : (
+          <div className="text-center">
+            {authState.loading ? (
+              <div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600">Setting up your account...</p>
+              </div>
+            ) : authState.error ? (
+              <div>
+                <div className="text-red-500 text-4xl mb-2">✗</div>
+                <h3 className="font-semibold text-lg mb-2 text-gray-900">Error</h3>
+                <p className="text-red-600 mb-4">{authState.error}</p>
+                <button 
+                  onClick={() => setAuthState({ loading: false, message: '', error: '', success: false })}
+                  className="bg-blue-500 text-white px-4 py-2 rounded"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600">Preparing your account...</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

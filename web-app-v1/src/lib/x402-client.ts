@@ -23,7 +23,7 @@ export class X402PaymentClient {
             'Content-Type': 'application/json',
           }
         }),
-        account
+        account as any
       );
 
       // Add response interceptor to handle payment responses
