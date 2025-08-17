@@ -21,7 +21,9 @@
     "next": "15.4.2-canary.46",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-markdown": "^10.1.0",
     "react-spring": "^10.0.1",
+    "remark-gfm": "^4.0.1",
     "viem": "^2.33.3",
     "x402-axios": "^0.5.1",
     "x402-next": "^0.5.2"

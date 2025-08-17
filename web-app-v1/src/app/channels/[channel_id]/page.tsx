@@ -11,6 +11,7 @@ import Header from '../../../components/Header';
 import { useUserData } from '../../../components/auth/DataProvider';
 import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalLink } from 'lucide-react';
 import FolderTree from '../../../components/FolderTree';
+import ChannelDescription from '../../../components/ChannelDescription';
 import { useChannelData } from '../../../hooks/useChannelData';
 import type { Document } from '../../../components/FolderTree';
 
@@ -199,17 +200,6 @@ function ChannelContent() {
                             ({channelInfo.channel_handle})
                           </motion.span>
                         </div>
-                        
-                        {channelInfo.description && (
-                          <motion.p
-                            initial={{ y: 5, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ duration: 0.6, delay: 0.6 }}
-                            className="text-xs text-gray-600 font-light truncate"
-                          >
-                            {channelInfo.description}
-                          </motion.p>
-                        )}
                       </div>
                     </motion.div>
                     
@@ -261,33 +251,44 @@ function ChannelContent() {
                 )}
               </motion.div>
               
-              {/* MAIN AREA - Cleared with Elegant Minimalism */}
+              {/* MAIN AREA - Channel Description and Content */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.8, delay: 0.6 }}
-                className="flex-1 p-12 flex items-center justify-center"
+                className="flex-1 p-8 flex flex-col"
               >
+                {/* Channel Description Component */}
+                {channelInfo?.description && (
+                  <ChannelDescription description={channelInfo.description} />
+                )}
+
+                {/* Content Space */}
                 <motion.div
                   initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.8, delay: 0.8 }}
-                  className="text-center max-w-md"
+                  transition={{ duration: 0.8, delay: channelInfo?.description ? 1.0 : 0.8 }}
+                  className="flex-1 flex items-center justify-center"
                 >
-                  <div className="w-16 h-16 mx-auto mb-8 flex items-center justify-center">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Circle className="w-16 h-16 text-gray-200" strokeWidth={0.5} />
-                    </motion.div>
+                  <div className="text-center max-w-md">
+                    <div className="w-16 h-16 mx-auto mb-8 flex items-center justify-center">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Circle className="w-16 h-16 text-gray-200" strokeWidth={0.5} />
+                      </motion.div>
+                    </div>
+                    <h3 className="text-xl font-light text-gray-400 mb-4 tracking-wide">
+                      {channelInfo?.description ? 'ADDITIONAL CONTENT' : 'CONTENT SPACE'}
+                    </h3>
+                    <p className="text-gray-300 font-light leading-relaxed">
+                      {channelInfo?.description 
+                        ? 'More content can be displayed here below the description.'
+                        : 'This area is ready for your content to shine with perfect clarity and focus.'
+                      }
+                    </p>
                   </div>
-                  <h3 className="text-xl font-light text-gray-400 mb-4 tracking-wide">
-                    CONTENT SPACE
-                  </h3>
-                  <p className="text-gray-300 font-light leading-relaxed">
-                    This area is ready for your content to shine with perfect clarity and focus.
-                  </p>
                 </motion.div>
               </motion.div>
             </div>
