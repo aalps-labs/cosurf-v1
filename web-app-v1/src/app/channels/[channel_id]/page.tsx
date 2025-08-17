@@ -9,7 +9,7 @@ import DataProvider from '../../../components/auth/DataProvider';
 import LoginTriggerProvider from '../../../components/auth/LoginTriggerContext';
 import Header from '../../../components/Header';
 import { useUserData } from '../../../components/auth/DataProvider';
-import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalLink, Coins, ChevronDown } from 'lucide-react';
+import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalLink, Coins, ChevronDown, Heart } from 'lucide-react';
 import FolderTree from '../../../components/FolderTree';
 import ChatInterface from '../../../components/ChatInterface';
 import ChannelInterface from '../../../components/ChannelInterface';
@@ -39,6 +39,8 @@ function ChannelContent() {
   const [error, setError] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<'channel' | 'chat'>('channel');
   const [showRecentUpdates, setShowRecentUpdates] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followingInProgress, setFollowingInProgress] = useState(false);
   
   // Load channel data (folders and documents)
   const { 
@@ -57,6 +59,31 @@ function ChannelContent() {
     // TODO: Navigate to document view or open in modal
     if (document.canonicalUrl && document.docType === 'WEB') {
       window.open(document.canonicalUrl, '_blank');
+    }
+  };
+
+  const fetchFollowStatus = async () => {
+    if (!userChannels.length || userChannels.some(channel => channel.id === channelId)) {
+      // Don't check follow status if no user channels or if this is user's own channel
+      return;
+    }
+
+    try {
+      const followerChannel = userChannels[0];
+      const response = await makeApiRequest(
+        buildApiUrl(`/api/v1/channels/${channelId}/follow-status?follower_id=${followerChannel.id}`),
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+      
+      if (response.ok) {
+        const status = await response.json();
+        setIsFollowing(status.is_following);
+      }
+    } catch (error) {
+      console.warn('Failed to get follow status:', error);
     }
   };
 
@@ -90,8 +117,9 @@ function ChannelContent() {
   useEffect(() => {
     if (channelId) {
       fetchChannelInfo();
+      fetchFollowStatus();
     }
-  }, [channelId]);
+  }, [channelId, userChannels]);
 
   const generateAvatarUrl = (name: string) => {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=000000&color=ffffff&size=120&font-size=0.4&bold=true`;
@@ -101,6 +129,49 @@ function ChannelContent() {
     console.log('Chat message from channel interface:', message);
     // Switch to chat view when user sends a message
     setCurrentView('chat');
+  };
+
+  const handleFollowToggle = async () => {
+    if (!userChannels.length || followingInProgress) return;
+
+    const userChannel = userChannels[0];
+    const action = isFollowing ? 'unfollow' : 'follow';
+    
+    try {
+      setFollowingInProgress(true);
+      
+      // Optimistic update
+      setIsFollowing(!isFollowing);
+
+      const response = await makeApiRequest(buildApiUrl(`/api/v1/channels/${userChannel.id}/follow`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          follower_id: userChannel.id,
+          followed_id: channelId,
+          action
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} channel`);
+      }
+
+      const result = await response.json();
+      setIsFollowing(result.is_following);
+      
+      // Update followers count if provided
+      if (result.followers_count !== undefined && channelInfo) {
+        setChannelInfo(prev => prev ? { ...prev, followers_count: result.followers_count } : null);
+      }
+
+    } catch (error) {
+      console.error('Follow action error:', error);
+      // Revert optimistic update on error
+      setIsFollowing(isFollowing);
+    } finally {
+      setFollowingInProgress(false);
+    }
   };
 
   const handleViewSwitch = (view: 'channel' | 'chat') => {
@@ -200,14 +271,14 @@ function ChannelContent() {
                         </motion.div>
                       </div>
 
-                      {/* One-Line Channel Information */}
+                      {/* Channel Information */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline space-x-2 mb-1">
+                        <div className="flex flex-col">
                           <motion.h1
                             initial={{ y: 5, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ duration: 0.6, delay: 0.4 }}
-                            className="text-2xl font-bold text-gray-900 truncate"
+                            className="text-2xl font-bold text-gray-900"
                           >
                             {channelInfo.name}
                           </motion.h1>
@@ -216,9 +287,9 @@ function ChannelContent() {
                             initial={{ y: 5, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ duration: 0.6, delay: 0.5 }}
-                            className="text-sm text-gray-500 font-light flex-shrink-0"
+                            className="text-sm text-gray-500 font-light"
                           >
-                            ({channelInfo.channel_handle})
+                            {channelInfo.channel_handle}
                           </motion.span>
                         </div>
                       </div>
@@ -229,16 +300,43 @@ function ChannelContent() {
                       initial={{ x: 20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
                       transition={{ duration: 0.6, delay: 0.2 }}
-                      className="flex items-center space-x-8 flex-shrink-0"
+                      className="flex items-center space-x-4 flex-shrink-0"
                     >
                       {/* Conditional Follow Button - Only show if not current user's channel */}
                       {!userChannels.some(channel => channel.id === channelInfo.id) && (
                         <motion.button
+                          onClick={handleFollowToggle}
+                          disabled={followingInProgress}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="px-3 py-1 bg-black text-white rounded text-xs font-medium hover:bg-gray-900 transition-colors duration-200"
+                          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+                            isFollowing
+                              ? 'bg-white/20 text-gray-700 hover:bg-white/30 border border-gray-300'
+                              : 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white hover:shadow-lg hover:shadow-purple-500/25'
+                          } ${
+                            followingInProgress ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
                         >
-                          Follow
+                          {followingInProgress ? (
+                            <>
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                className="w-4 h-4 border-2 border-current border-t-transparent rounded-full"
+                              />
+                              <span>Processing</span>
+                            </>
+                          ) : isFollowing ? (
+                            <>
+                              <Heart className="w-4 h-4 fill-current" />
+                              <span>Following</span>
+                            </>
+                          ) : (
+                            <>
+                              <Star className="w-4 h-4" />
+                              <span>Follow</span>
+                            </>
+                          )}
                         </motion.button>
                       )}
                       
@@ -246,7 +344,7 @@ function ChannelContent() {
                       <motion.div
                         whileHover={{ scale: 1.05 }}
                         transition={{ duration: 0.2 }}
-                        className="flex flex-col items-center group cursor-pointer px-4"
+                        className="flex flex-col items-center group cursor-pointer px-2"
                       >
                         <span className="text-sm font-medium text-gray-500 group-hover:text-gray-600 mb-1">
                           followers
@@ -266,7 +364,7 @@ function ChannelContent() {
                       <motion.div
                         whileHover={{ scale: 1.05 }}
                         transition={{ duration: 0.2 }}
-                        className="flex flex-col items-center group cursor-pointer px-4"
+                        className="flex flex-col items-center group cursor-pointer px-2"
                       >
                         <div className="flex items-center space-x-2 mb-1">
                           <span className="text-sm font-medium text-gray-500 group-hover:text-gray-600">
