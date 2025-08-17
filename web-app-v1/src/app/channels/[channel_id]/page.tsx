@@ -9,7 +9,10 @@ import DataProvider from '../../../components/auth/DataProvider';
 import LoginTriggerProvider from '../../../components/auth/LoginTriggerContext';
 import Header from '../../../components/Header';
 import { useUserData } from '../../../components/auth/DataProvider';
-import { Users, Star, Circle } from 'lucide-react';
+import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalLink } from 'lucide-react';
+import FolderTree from '../../../components/FolderTree';
+import { useChannelData } from '../../../hooks/useChannelData';
+import type { Document } from '../../../components/FolderTree';
 
 interface ChannelInfo {
   id: string;
@@ -31,6 +34,26 @@ function ChannelContent() {
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Load channel data (folders and documents)
+  const { 
+    folders, 
+    documents, 
+    isLoading: dataLoading, 
+    error: dataError, 
+    lastSyncTime,
+    refetch: refetchData,
+    sync: syncData 
+  } = useChannelData(channelId);
+
+  // Handle document click
+  const handleDocumentClick = (document: Document) => {
+    console.log('Document clicked:', document);
+    // TODO: Navigate to document view or open in modal
+    if (document.canonicalUrl && document.docType === 'WEB') {
+      window.open(document.canonicalUrl, '_blank');
+    }
+  };
 
   const fetchChannelInfo = async () => {
     try {
@@ -277,33 +300,98 @@ function ChannelContent() {
               className="w-px bg-gray-100"
             />
 
-            {/* RIGHT SIDE PANEL - Ultra Clean */}
+            {/* RIGHT SIDE PANEL - Folder Tree */}
             <motion.div
               initial={{ x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.5 }}
-              className="w-80 p-12 flex items-center justify-center bg-gray-50/30"
+              className="w-80 bg-gradient-to-b from-gray-50/40 via-indigo-50/20 to-purple-50/20 flex flex-col backdrop-blur-sm"
             >
+              {/* Sidebar Header */}
               <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 1 }}
-                className="text-center"
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.6 }}
+                className="border-b border-gray-100/80 px-6 py-4 bg-gradient-to-r from-white/80 to-indigo-50/30 backdrop-blur-sm"
               >
-                <div className="w-12 h-12 mx-auto mb-6 flex items-center justify-center">
-                  <motion.div
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 4, repeat: Infinity }}
-                  >
-                    <div className="w-3 h-3 rounded-full bg-gray-300" />
-                  </motion.div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-lg blur-sm opacity-20" />
+                      <FolderTreeIcon className="w-5 h-5 text-indigo-600 relative z-10 drop-shadow-sm" strokeWidth={1.5} />
+                    </div>
+                    <h3 className="text-sm font-semibold text-gray-800 tracking-wide">Content</h3>
+                  </div>
+                  
+                  {/* Sync Controls */}
+                  <div className="flex items-center space-x-1">
+                    {lastSyncTime && (
+                      <span className="text-xs text-gray-500" title={`Last sync: ${lastSyncTime.toLocaleTimeString()}`}>
+                        {Math.floor((Date.now() - lastSyncTime.getTime()) / 60000)}m
+                      </span>
+                    )}
+                    
+                    <motion.button
+                      whileHover={{ scale: 1.05, backgroundColor: "rgba(99, 102, 241, 0.1)" }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => syncData()}
+                      disabled={dataLoading}
+                      className="p-2 rounded-lg hover:bg-indigo-50 disabled:opacity-50 transition-all duration-200 border border-transparent hover:border-indigo-200/50"
+                      title="Sync with backend"
+                    >
+                      <RefreshCw className={`w-4 h-4 text-indigo-500 ${dataLoading ? 'animate-spin' : ''}`} strokeWidth={2} />
+                    </motion.button>
+                  </div>
                 </div>
-                <h3 className="text-lg font-light text-gray-400 mb-4 tracking-wide">
-                  SIDEBAR
-                </h3>
-                <p className="text-gray-300 font-light text-sm leading-relaxed">
-                  Clean space reserved for navigation and supplementary content.
-                </p>
+                
+                {/* Stats */}
+                <div className="flex items-center space-x-6 mt-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-full" />
+                    <span className="text-xs text-gray-600 font-medium">{folders.length} folders</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full" />
+                    <span className="text-xs text-gray-600 font-medium">{documents.length} documents</span>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Folder Tree Content */}
+              <motion.div
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.8 }}
+                className="flex-1 overflow-y-auto"
+              >
+                <div className="p-4">
+                  {dataLoading ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <RefreshCw className="w-8 h-8 text-gray-300 animate-spin mb-4" strokeWidth={1} />
+                      <p className="text-sm text-gray-400">Loading content...</p>
+                    </div>
+                  ) : dataError ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Circle className="w-8 h-8 text-red-300 mb-4" strokeWidth={1} />
+                      <p className="text-sm text-red-400 mb-2">Failed to load</p>
+                      <p className="text-xs text-gray-400 mb-4">{dataError}</p>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => refetchData()}
+                        className="px-3 py-1 bg-red-50 text-red-600 rounded text-xs font-medium hover:bg-red-100 transition-colors duration-200"
+                      >
+                        Retry
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <FolderTree
+                      folders={folders}
+                      documents={documents}
+                      onDocumentClick={handleDocumentClick}
+                    />
+                  )}
+                </div>
               </motion.div>
             </motion.div>
 
