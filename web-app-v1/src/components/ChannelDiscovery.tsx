@@ -7,6 +7,8 @@ import { useUserData } from './auth/DataProvider';
 import { useLoginTrigger } from './auth/LoginTriggerContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Coins, Star, Sparkles, TrendingUp, Eye, Heart, Zap } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Channel {
   id: string;
@@ -51,6 +53,33 @@ export default function ChannelDiscovery() {
   const [followingInProgress, setFollowingInProgress] = useState<Set<string>>(new Set());
   
   const CHANNELS_PER_PAGE = 12;
+
+  // Markdown components configuration for descriptions
+  const markdownComponents = {
+    h1: ({ children }: any) => <h1 className="text-sm font-semibold text-gray-800 mb-1">{children}</h1>,
+    h2: ({ children }: any) => <h2 className="text-sm font-medium text-gray-700 mb-1">{children}</h2>,
+    h3: ({ children }: any) => <h3 className="text-xs font-medium text-gray-700 mb-1">{children}</h3>,
+    p: ({ children }: any) => <p className="text-gray-600 text-xs leading-relaxed mb-1">{children}</p>,
+    ul: ({ children }: any) => <ul className="list-disc list-inside text-gray-600 text-xs space-y-0.5 mb-1">{children}</ul>,
+    ol: ({ children }: any) => <ol className="list-decimal list-inside text-gray-600 text-xs space-y-0.5 mb-1">{children}</ol>,
+    li: ({ children }: any) => <li className="text-gray-600 text-xs">{children}</li>,
+    strong: ({ children }: any) => <strong className="font-semibold text-gray-700">{children}</strong>,
+    em: ({ children }: any) => <em className="italic text-gray-600">{children}</em>,
+    code: ({ children }: any) => <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono text-gray-700">{children}</code>,
+    a: ({ href, children }: any) => (
+      <a 
+        href={href} 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        className="text-indigo-600 hover:text-indigo-800 underline text-xs"
+      >
+        {children}
+      </a>
+    ),
+    // Simplify other elements for compact display
+    pre: ({ children }: any) => <div className="bg-gray-100 p-1 rounded text-xs font-mono text-gray-700 mb-1">{children}</div>,
+    blockquote: ({ children }: any) => <div className="border-l-2 border-gray-300 pl-2 text-gray-600 text-xs mb-1">{children}</div>,
+  };
 
   // User channels are now loaded globally via DataProvider
 
@@ -690,9 +719,14 @@ export default function ChannelDiscovery() {
                           transition={{ duration: 0.3, delay: 0.1 }}
                           className="bg-white/95 backdrop-blur-sm border-t border-white/20 p-4"
                         >
-                          <p className="text-gray-700 text-sm leading-relaxed line-clamp-2">
-                            {channel.description}
-                          </p>
+                          <div className="prose prose-xs max-w-none line-clamp-3 overflow-hidden">
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]} 
+                              components={markdownComponents}
+                            >
+                              {channel.description}
+                            </ReactMarkdown>
+                          </div>
                         </motion.div>
                       )}
                       
@@ -814,6 +848,27 @@ export default function ChannelDiscovery() {
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
+        }
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .prose-xs {
+          font-size: 0.75rem;
+          line-height: 1rem;
+        }
+        .prose-xs p {
+          margin-bottom: 0.25rem;
+        }
+        .prose-xs h1, .prose-xs h2, .prose-xs h3 {
+          margin-bottom: 0.25rem;
+          margin-top: 0;
+        }
+        .prose-xs ul, .prose-xs ol {
+          margin-bottom: 0.25rem;
+          margin-top: 0;
         }
       `}</style>
     </div>
