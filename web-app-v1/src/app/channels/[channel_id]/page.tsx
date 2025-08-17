@@ -11,10 +11,8 @@ import Header from '../../../components/Header';
 import { useUserData } from '../../../components/auth/DataProvider';
 import { Users, Star, Circle, RefreshCw, FolderTree as FolderTreeIcon, ExternalLink } from 'lucide-react';
 import FolderTree from '../../../components/FolderTree';
-import ChannelDescription from '../../../components/ChannelDescription';
-import RecentlyAsked from '../../../components/RecentlyAsked';
-import VersionTimeline from '../../../components/VersionTimeline';
-import ChatInput from '../../../components/ChatInput';
+import ChatInterface from '../../../components/ChatInterface';
+import ChannelInterface from '../../../components/ChannelInterface';
 import { useChannelData } from '../../../hooks/useChannelData';
 import type { Document } from '../../../components/FolderTree';
 
@@ -38,6 +36,7 @@ function ChannelContent() {
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<'channel' | 'chat'>('channel');
   
   // Load channel data (folders and documents)
   const { 
@@ -94,6 +93,16 @@ function ChannelContent() {
 
   const generateAvatarUrl = (name: string) => {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=000000&color=ffffff&size=120&font-size=0.4&bold=true`;
+  };
+
+  const handleChatMessage = (message: string) => {
+    console.log('Chat message from channel interface:', message);
+    // Switch to chat view when user sends a message
+    setCurrentView('chat');
+  };
+
+  const handleViewSwitch = (view: 'channel' | 'chat') => {
+    setCurrentView(view);
   };
 
   return (
@@ -260,6 +269,37 @@ function ChannelContent() {
                           </span>
                         </div>
                       </motion.div>
+
+                      {/* Vertical Separator */}
+                      <div className="h-12 w-px bg-gray-200"></div>
+
+                      {/* View Toggle Buttons */}
+                      <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleViewSwitch('channel')}
+                          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                            currentView === 'channel'
+                              ? 'bg-white text-gray-900 shadow-sm'
+                              : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          Overview
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleViewSwitch('chat')}
+                          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                            currentView === 'chat'
+                              ? 'bg-white text-gray-900 shadow-sm'
+                              : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          Chat
+                        </motion.button>
+                      </div>
                     </motion.div>
                   </div>
                 ) : (
@@ -267,66 +307,20 @@ function ChannelContent() {
                 )}
               </motion.div>
               
-              {/* MAIN AREA - Split Layout */}
-              <div className="flex-1 p-8 flex flex-col space-y-6">
-                {/* Chat Input Section */}
-                {channelInfo && !loading && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
-                  >
-                    <ChatInput 
-                      placeholder={`Ask anything about ${channelInfo.name}...`}
-                      onSend={(message) => {
-                        console.log('Chat message:', message);
-                        // TODO: Implement chat logic
-                      }}
-                    />
-                  </motion.div>
-                )}
-
-                {/* Top Section - Channel Description */}
-                {channelInfo?.description && !loading && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.3 }}
-                  >
-                    <ChannelDescription description={channelInfo.description} />
-                  </motion.div>
-                )}
-
-                {/* Bottom Section - Split Content with Fixed Height */}
-                {channelInfo && !loading && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.6 }}
-                    className="h-[32rem] flex space-x-6"
-                  >
-                    {/* Left Half - Recently Asked */}
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.6, delay: 0.8 }}
-                      className="flex-1"
-                    >
-                      <RecentlyAsked channelId={channelId} />
-                    </motion.div>
-
-                    {/* Right Half - Version Timeline */}
-                    <motion.div
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.6, delay: 1.0 }}
-                      className="flex-1"
-                    >
-                      <VersionTimeline channelId={channelId} />
-                    </motion.div>
-                  </motion.div>
-                )}
-              </div>
+              {/* MAIN AREA - Dynamic Content Based on Current View */}
+              {currentView === 'channel' ? (
+                <ChannelInterface
+                  channelId={channelId}
+                  channelInfo={channelInfo}
+                  loading={loading}
+                  onChatMessage={handleChatMessage}
+                />
+              ) : (
+                <ChatInterface
+                  channelId={channelId}
+                  channelName={channelInfo?.name}
+                />
+              )}
             </div>
 
             {/* Minimal Vertical Divider */}
