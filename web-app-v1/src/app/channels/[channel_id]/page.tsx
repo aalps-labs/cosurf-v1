@@ -434,6 +434,7 @@ function ChannelContent() {
                     channelInfo={channelInfo}
                     loading={loading}
                     onChatMessage={handleChatMessage}
+                    onViewSwitch={handleViewSwitch}
                   />
                 ) : (
                   <ChatInterface

@@ -24,6 +24,7 @@ interface ChannelInterfaceProps {
   channelInfo: ChannelInfo | null;
   loading?: boolean;
   onChatMessage?: (message: string) => void;
+  onViewSwitch?: (view: 'channel' | 'chat') => void;
   className?: string;
 }
 
@@ -32,15 +33,22 @@ export default function ChannelInterface({
   channelInfo,
   loading = false,
   onChatMessage,
+  onViewSwitch,
   className = ""
 }: ChannelInterfaceProps) {
   
   const handleChatMessage = (message: string) => {
     console.log('Chat message:', message);
+    
+    // Switch to chat view first
+    if (onViewSwitch) {
+      onViewSwitch('chat');
+    }
+    
+    // Then trigger the chat message
     if (onChatMessage) {
       onChatMessage(message);
     }
-    // TODO: Implement chat logic or switch to chat interface
   };
 
   return (
