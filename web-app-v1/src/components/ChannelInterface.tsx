@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import ChatInput from './ChatInput';
 import ChannelDescription from './ChannelDescription';
 import RecentlyAsked from './RecentlyAsked';
-import VersionTimeline from './VersionTimeline';
 
 interface ChannelInfo {
   id: string;
@@ -88,14 +87,14 @@ export default function ChannelInterface({
             <RecentlyAsked channelId={channelId} />
           </motion.div>
 
-          {/* Right Half - Version Timeline */}
+          {/* Right Half - Empty Placeholder */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 1.0 }}
             className="flex-1"
           >
-            <VersionTimeline channelId={channelId} />
+            {/* Empty div for future content */}
           </motion.div>
         </motion.div>
       )}

@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { GitBranch, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { GitBranch, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface VersionUpdate {
@@ -26,7 +26,7 @@ const mockVersions: VersionUpdate[] = [
     version: 'v2.1.0',
     title: 'Enhanced Search Algorithm',
     description: 'Improved search relevance with semantic understanding and better ranking.',
-    timestamp: new Date('2024-01-15T14:30:00Z'),
+    timestamp: new Date('2025-08-15T14:30:00Z'),
     type: 'minor',
     changes: [
       'Added semantic search capabilities with vector embeddings',
@@ -42,7 +42,7 @@ const mockVersions: VersionUpdate[] = [
     version: 'v2.0.5',
     title: 'Performance Optimizations',
     description: 'Critical performance improvements and bug fixes for better user experience.',
-    timestamp: new Date('2024-01-10T09:15:00Z'),
+    timestamp: new Date('2025-08-12T09:15:00Z'),
     type: 'patch',
     changes: [
       'Reduced search latency by 40% through caching optimization',
@@ -58,7 +58,7 @@ const mockVersions: VersionUpdate[] = [
     version: 'v2.0.0',
     title: 'Major Architecture Overhaul',
     description: 'Complete rewrite of the core engine with modern technologies and improved scalability.',
-    timestamp: new Date('2024-01-05T16:45:00Z'),
+    timestamp: new Date('2025-08-08T16:45:00Z'),
     type: 'major',
     changes: [
       'Migrated to microservices architecture with Docker containers',
@@ -75,10 +75,10 @@ const mockVersions: VersionUpdate[] = [
     version: 'v1.9.8',
     title: 'Security Patch',
     description: 'Critical security updates and vulnerability fixes.',
-    timestamp: new Date('2023-12-28T11:20:00Z'),
+    timestamp: new Date('2025-08-05T11:20:00Z'),
     type: 'hotfix',
     changes: [
-      'Fixed critical authentication bypass vulnerability (CVE-2023-1234)',
+      'Fixed critical authentication bypass vulnerability (CVE-2025-1234)',
       'Updated all dependencies with latest security patches',
       'Enhanced input validation and sanitization across all endpoints',
       'Implemented rate limiting to prevent abuse',
@@ -91,7 +91,7 @@ const mockVersions: VersionUpdate[] = [
     version: 'v1.9.0',
     title: 'Analytics Dashboard',
     description: 'New analytics and reporting features for better insights.',
-    timestamp: new Date('2023-12-20T13:10:00Z'),
+    timestamp: new Date('2025-08-01T13:10:00Z'),
     type: 'minor',
     changes: [
       'Added comprehensive analytics dashboard with real-time metrics',
@@ -107,7 +107,7 @@ const mockVersions: VersionUpdate[] = [
     version: 'v1.8.3',
     title: 'Bug Fixes and Improvements',
     description: 'Various bug fixes and minor improvements for stability.',
-    timestamp: new Date('2023-12-15T10:30:00Z'),
+    timestamp: new Date('2025-07-28T10:30:00Z'),
     type: 'patch',
     changes: [
       'Fixed search result pagination edge cases and infinite scroll',
@@ -123,7 +123,7 @@ const mockVersions: VersionUpdate[] = [
     version: 'v1.8.0',
     title: 'Multi-tenant Support',
     description: 'Added support for multiple organizations and improved user management.',
-    timestamp: new Date('2023-12-10T14:20:00Z'),
+    timestamp: new Date('2025-07-22T14:20:00Z'),
     type: 'minor',
     changes: [
       'Implemented organization-based access control',
@@ -137,7 +137,7 @@ const mockVersions: VersionUpdate[] = [
     version: 'v1.7.2',
     title: 'Critical Security Fix',
     description: 'Emergency patch for security vulnerability.',
-    timestamp: new Date('2023-12-05T08:45:00Z'),
+    timestamp: new Date('2025-07-18T08:45:00Z'),
     type: 'hotfix',
     changes: [
       'Fixed SQL injection vulnerability',
@@ -153,19 +153,10 @@ const getTypeColor = (type: VersionUpdate['type']) => {
 };
 
 const getTypeIcon = (type: VersionUpdate['type']) => {
-  return <Clock className="w-3 h-3" />;
+  return <GitBranch className="w-3 h-3" />;
 };
 
-const formatTimeAgo = (date: Date) => {
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-  if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-  return date.toLocaleDateString();
-};
+
 
 export default function VersionTimeline({ channelId }: VersionTimelineProps) {
   const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set());
@@ -194,22 +185,6 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
 
   return (
     <div className="h-full bg-gradient-to-br from-gray-50 to-blue-50/30 border border-gray-200/60 rounded-xl shadow-sm backdrop-blur-sm flex flex-col">
-      {/* Header */}
-      <div className="border-b border-gray-200/60 px-6 py-4 bg-gradient-to-r from-white/80 to-blue-50/30">
-        <div className="flex items-center space-x-3">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg blur-sm opacity-20" />
-            <GitBranch className="w-5 h-5 text-blue-600 relative z-10 drop-shadow-sm" strokeWidth={1.5} />
-          </div>
-          <div className="flex items-center space-x-2">
-            <h3 className="text-sm font-semibold text-gray-800 tracking-wide">Version Timeline</h3>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-              AI Analysis
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Timeline Content */}
       <div className="flex-1 min-h-0 p-4">
         <div className="h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
@@ -237,12 +212,7 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
                     {getTypeIcon(version.type)}
                   </motion.div>
                   
-                  {/* Version below node */}
-                  <div className="mt-1 px-2 py-0.5 bg-purple-100 rounded-full">
-                    <span className="text-xs font-medium text-purple-700">
-                      {version.version}
-                    </span>
-                  </div>
+
                   
                   {/* Connection Line to Content */}
                   <div className="absolute top-4 left-8 w-3 h-0.5 bg-gradient-to-r from-gray-300 to-transparent" />
@@ -274,21 +244,17 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
                 >
                   {/* Header */}
                   <div className="mb-2">
-                    {/* Title and Hash Row */}
+                    {/* Title and Date Row */}
                     <div className="flex items-center justify-between mb-1">
                       <h4 className="text-sm font-semibold text-gray-900 leading-tight">
                         {version.title}
                       </h4>
                       
-                      {version.commitHash && (
-                        <motion.code
-                          whileHover={{ scale: 1.05 }}
-                          className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono cursor-pointer hover:bg-gray-200 transition-colors ml-3 flex-shrink-0"
-                          title="Commit hash"
-                        >
-                          {version.commitHash}
-                        </motion.code>
-                      )}
+                      <div className="px-1.5 py-0.5 bg-purple-100 rounded text-purple-700 ml-2 flex-shrink-0">
+                        <span className="text-xs font-medium">
+                          {version.timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
                     </div>
                     
                     {/* Description Full Width */}
@@ -345,15 +311,7 @@ export default function VersionTimeline({ channelId }: VersionTimelineProps) {
                     </AnimatePresence>
                   </div>
 
-                  {/* Footer */}
-                  <div className="flex items-center justify-end pt-2 border-t border-gray-100">
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-3 h-3 text-gray-400" />
-                      <span className="text-xs text-gray-500" title={version.timestamp.toLocaleString()}>
-                        {formatTimeAgo(version.timestamp)}
-                      </span>
-                    </div>
-                  </div>
+
                 </motion.div>
               </motion.div>
             ))}
