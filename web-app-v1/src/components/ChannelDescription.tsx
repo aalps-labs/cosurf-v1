@@ -83,16 +83,33 @@ const ChannelDescription: React.FC<ChannelDescriptionProps> = ({ description }) 
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.8 }}
-        className="mb-8 relative"
+        className="mb-3 relative"
       >
         <div 
           className="bg-gradient-to-br from-gray-50 to-indigo-50/30 border border-gray-200/60 rounded-xl shadow-sm backdrop-blur-sm flex flex-col relative"
           style={{ 
-            height: contentHeight > 0 ? Math.min(contentHeight + 48, MAX_HEIGHT) : 'auto',
+            height: contentHeight > 0 ? Math.min(contentHeight + 88, MAX_HEIGHT) : 'auto',
             maxHeight: MAX_HEIGHT 
           }}
         >
-          <div className="flex-1 min-h-0 p-6 relative">
+          {/* Header Section */}
+          <div className="flex items-center justify-between p-4 pb-2">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Channel Description</h3>
+            </div>
+            {contentHeight > MAX_HEIGHT - 88 && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowFullDescription(true)}
+                className="bg-white border border-gray-200 rounded-lg p-2 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </motion.button>
+            )}
+          </div>
+
+          <div className="flex-1 min-h-0 px-6 pb-6 relative">
             {/* Hidden content for measurement */}
             <div 
               ref={contentRef}
@@ -105,26 +122,12 @@ const ChannelDescription: React.FC<ChannelDescriptionProps> = ({ description }) 
             </div>
             
             {/* Visible content */}
-            <div className={`prose prose-sm prose-gray max-w-none h-full pr-2 ${contentHeight > MAX_HEIGHT - 48 ? 'overflow-y-auto scrollbar-thin' : ''}`}>
+            <div className={`prose prose-sm prose-gray max-w-none h-full pr-2 ${contentHeight > MAX_HEIGHT - 88 ? 'overflow-y-auto scrollbar-thin' : ''}`}>
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                 {description}
               </ReactMarkdown>
             </div>
           </div>
-          
-          {/* View More Button - Show when content exceeds max height */}
-          {contentHeight > MAX_HEIGHT - 48 && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              onClick={() => setShowFullDescription(true)}
-              className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white hover:text-gray-900 transition-all duration-200 shadow-sm hover:shadow-md flex items-center space-x-2"
-            >
-              <Maximize2 className="w-4 h-4" />
-              <span>View More</span>
-            </motion.button>
-          )}
         </div>
       </motion.div>
 

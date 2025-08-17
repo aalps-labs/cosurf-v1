@@ -193,7 +193,7 @@ function ChannelContent() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
           className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_4px_rgba(0,0,0,0.05),0_12px_24px_rgba(0,0,0,0.05)] flex-1 flex flex-col min-h-0"
         >
           
@@ -205,9 +205,9 @@ function ChannelContent() {
               
               {/* TITLE AREA - Ultra-Thin One-Line Layout */}
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8 }}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
                 className="border-b border-gray-50 px-6 py-3 bg-gradient-to-b from-gray-50/30 to-transparent"
               >
                 {loading ? (
@@ -244,7 +244,7 @@ function ChannelContent() {
                     <motion.div
                       initial={{ x: -20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
-                      transition={{ duration: 0.6 }}
+                      transition={{ duration: 0.6, delay: 0.3 }}
                       className="flex items-center space-x-3 flex-1 min-w-0"
                     >
                       {/* Tiny Avatar */}
@@ -277,7 +277,7 @@ function ChannelContent() {
                           <motion.h1
                             initial={{ y: 5, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
-                            transition={{ duration: 0.6, delay: 0.4 }}
+                            transition={{ duration: 0.6, delay: 0.35 }}
                             className="text-2xl font-bold text-gray-900"
                           >
                             {channelInfo.name}
@@ -286,7 +286,7 @@ function ChannelContent() {
                           <motion.span
                             initial={{ y: 5, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
-                            transition={{ duration: 0.6, delay: 0.5 }}
+                            transition={{ duration: 0.6, delay: 0.4 }}
                             className="text-sm text-gray-500 font-light"
                           >
                             {channelInfo.channel_handle}
@@ -299,7 +299,7 @@ function ChannelContent() {
                     <motion.div
                       initial={{ x: 20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
-                      transition={{ duration: 0.6, delay: 0.2 }}
+                      transition={{ duration: 0.6, delay: 0.45 }}
                       className="flex items-center space-x-4 flex-shrink-0"
                     >
                       {/* Conditional Follow Button - Only show if not current user's channel */}
@@ -427,7 +427,12 @@ function ChannelContent() {
               </motion.div>
               
               {/* MAIN AREA - Dynamic Content Based on Current View */}
-              <div className="flex-1 min-h-0">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.5 }}
+                className="flex-1 min-h-0"
+              >
                 {currentView === 'channel' ? (
                   <ChannelInterface
                     channelId={channelId}
@@ -443,14 +448,14 @@ function ChannelContent() {
                     className="h-full"
                   />
                 )}
-              </div>
+              </motion.div>
             </div>
 
             {/* Minimal Vertical Divider */}
             <motion.div
               initial={{ scaleY: 0 }}
               animate={{ scaleY: 1 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
               className="w-px bg-gray-100"
             />
 
@@ -458,7 +463,7 @@ function ChannelContent() {
             <motion.div
               initial={{ x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.5 }}
+              transition={{ duration: 0.6, delay: 0.7 }}
               className="w-96 bg-gradient-to-b from-gray-50/40 via-indigo-50/20 to-purple-50/20 flex flex-col backdrop-blur-sm resize-x overflow-hidden min-w-80 max-w-2xl"
             >
               {/* TOP HALF - Folder Tree */}
@@ -467,7 +472,7 @@ function ChannelContent() {
                 <motion.div
                   initial={{ y: -10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.6, delay: 0.6 }}
+                  transition={{ duration: 0.6, delay: 0.8 }}
                   className="border-b border-gray-100/80 px-6 py-4 bg-gradient-to-r from-white/80 to-indigo-50/30 backdrop-blur-sm"
                 >
                   <div className="flex items-center justify-between">
@@ -517,7 +522,7 @@ function ChannelContent() {
                 <motion.div
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.8, delay: 0.8 }}
+                  transition={{ duration: 0.6, delay: 0.9 }}
                   className="flex-1 overflow-y-auto min-h-0"
                 >
                   <div className="p-4">
@@ -555,7 +560,7 @@ function ChannelContent() {
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 1.0 }}
+                transition={{ duration: 0.6, delay: 1.0 }}
                 className="border-t border-gray-100/80"
               >
                 {/* Recent Updates Header with Dropdown Toggle */}

@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import ChatInput from './ChatInput';
 import ChannelDescription from './ChannelDescription';
+import ChannelInsights from './ChannelInsights';
 import OtherChats from './OtherChats';
 import CollabChannels from './CollabChannels';
 
@@ -78,19 +79,31 @@ export default function ChannelInterface({
         </motion.div>
       )}
 
+      {/* Channel Insights Section */}
+      {channelInfo && !loading && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="-mt-3"
+        >
+          <ChannelInsights channelId={channelId} />
+        </motion.div>
+      )}
+
       {/* Bottom Section - Split Content with Fixed Height */}
       {channelInfo && !loading && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
           className="h-[32rem] flex space-x-6"
         >
           {/* Left Half - Other Chats */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
+            transition={{ duration: 0.6, delay: 1.0 }}
             className="flex-1"
           >
             <OtherChats channelId={channelId} />
@@ -100,7 +113,7 @@ export default function ChannelInterface({
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 1.0 }}
+            transition={{ duration: 0.6, delay: 1.2 }}
             className="flex-1"
           >
             <CollabChannels channelId={channelId} />
