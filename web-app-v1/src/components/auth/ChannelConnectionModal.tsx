@@ -740,7 +740,7 @@ export default function ChannelConnectionModal({ isOpen, onClose, onComplete }: 
                               </p>
                               <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                                 <span>{channel.followers_count} followers</span>
-                                <span>Rep: {channel.rep_score}</span>
+                                <span>Staking: {((channel.rep_score || 0) / 1000).toFixed(3)} ETH</span>
                                 {channelStatus === 'occupied' && channel.ownership?.user_name && (
                                   <span className="text-red-600 font-medium">
                                     Owned by: {channel.ownership.user_name}

@@ -2,18 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { Loader2, List, Plus } from 'lucide-react';
 import ChatInput from './ChatInput';
 import AiMessage from './AiMessage';
 import UserMessage from './UserMessage';
-
-interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'assistant';
-  timestamp: Date;
-  isTyping?: boolean;
-}
+import ChatHistoryPopup from './ChatHistoryPopup';
+import { useChatHistory, type Message } from '../hooks/useChatHistory';
 
 interface ChatInterfaceProps {
   channelId: string;
@@ -26,17 +20,30 @@ export default function ChatInterface({
   channelName = "Channel",
   className = "" 
 }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome-1',
-      content: `I recently found some interesting updates about ${channelName}. What would you like to explore or discuss?`,
-      sender: 'assistant',
-      timestamp: new Date()
-    }
-  ]);
+  const { 
+    currentSession, 
+    recentSessions,
+    updateSession, 
+    createNewSession,
+    loadSession,
+    deleteSession
+  } = useChatHistory(channelId);
   const [isAssistantTyping, setIsAssistantTyping] = useState(false);
+  const [showHistoryPopup, setShowHistoryPopup] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fixed model - Gemini 2.5 Flash
+  const selectedModel = 'gemini-2.5-flash';
+
+  // Initialize with a new session if none exists
+  useEffect(() => {
+    if (!currentSession) {
+      createNewSession(channelId, channelName);
+    }
+  }, [currentSession, createNewSession, channelId, channelName]);
+
+  const messages = currentSession?.messages || [];
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -44,6 +51,8 @@ export default function ChatInterface({
   }, [messages, isAssistantTyping]);
 
   const handleSendMessage = async (content: string) => {
+    if (!currentSession) return;
+
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       content,
@@ -51,24 +60,131 @@ export default function ChatInterface({
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setIsAssistantTyping(true);
+    const updatedMessages = [...messages, userMessage];
+    updateSession(currentSession.id, updatedMessages);
 
-    // Simulate AI response (replace with actual API call)
-    setTimeout(() => {
+    try {
+      // Create assistant message with streaming placeholder
+      const assistantMessageId = `assistant-${Date.now()}`;
       const assistantMessage: Message = {
+        id: assistantMessageId,
+        content: '',
+        sender: 'assistant',
+        timestamp: new Date(),
+        isTyping: true
+      };
+
+      const messagesWithAssistant = [...updatedMessages, assistantMessage];
+      updateSession(currentSession.id, messagesWithAssistant);
+
+      // Call streaming API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: `You are an AI assistant helping with questions about ${channelName}. Please provide helpful and contextual responses.\n\nUser question: ${content}`,
+          model: selectedModel,
+          temperature: 0.7,
+          stream: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      let accumulatedContent = '';
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.trim() && line.startsWith('0:')) {
+            try {
+              const content = JSON.parse(line.slice(2));
+              accumulatedContent += content;
+
+              // Update the assistant message with accumulated content
+              const currentMessages = [...updatedMessages];
+              const assistantIndex = currentMessages.findIndex(msg => msg.id === assistantMessageId);
+              
+              if (assistantIndex === -1) {
+                currentMessages.push({
+                  id: assistantMessageId,
+                  content: accumulatedContent,
+                  sender: 'assistant',
+                  timestamp: new Date(),
+                  isTyping: true
+                });
+              } else {
+                currentMessages[assistantIndex] = {
+                  ...currentMessages[assistantIndex],
+                  content: accumulatedContent,
+                  isTyping: true
+                };
+              }
+
+              updateSession(currentSession.id, currentMessages);
+            } catch (e) {
+              console.error('Error parsing chunk:', e);
+            }
+          }
+        }
+      }
+
+      // Mark streaming as complete
+      const finalMessages = [...updatedMessages];
+      const assistantIndex = finalMessages.findIndex(msg => msg.id === assistantMessageId);
+      
+      if (assistantIndex !== -1) {
+        finalMessages[assistantIndex] = {
+          ...finalMessages[assistantIndex],
+          content: accumulatedContent,
+          isTyping: false
+        };
+      } else {
+        finalMessages.push({
+          id: assistantMessageId,
+          content: accumulatedContent,
+          sender: 'assistant',
+          timestamp: new Date(),
+          isTyping: false
+        });
+      }
+
+      updateSession(currentSession.id, finalMessages);
+
+    } catch (error) {
+      console.error('Error calling chat API:', error);
+      
+      // Add error message
+      const errorMessage: Message = {
         id: `assistant-${Date.now()}`,
-        content: `I understand you're asking about "${content}". This is a simulated response for channel ${channelName}. In a real implementation, this would connect to your AI backend to provide contextual answers based on the channel's content.`,
+        content: `Sorry, I encountered an error while processing your request. Please try again.`,
         sender: 'assistant',
         timestamp: new Date()
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsAssistantTyping(false);
-    }, 1500);
+      const errorMessages = [...updatedMessages, errorMessage];
+      updateSession(currentSession.id, errorMessages);
+    }
   };
 
-  const handleEditMessage = (messageId: string, newContent: string) => {
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    if (!currentSession) return;
+
     // Find the index of the message being edited
     const messageIndex = messages.findIndex(msg => msg.id === messageId);
     if (messageIndex === -1) return;
@@ -83,31 +199,37 @@ export default function ChatInterface({
     };
 
     // Set the new message list and trigger new AI response
-    setMessages([...updatedMessages, editedMessage]);
-    setIsAssistantTyping(true);
-
-    // Generate new AI response for the edited message
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        content: `I understand you're asking about "${newContent}". This is a simulated response for channel ${channelName}. In a real implementation, this would connect to your AI backend to provide contextual answers based on the channel's content.`,
-        sender: 'assistant',
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsAssistantTyping(false);
-    }, 1500);
+    const messagesWithEdit = [...updatedMessages, editedMessage];
+    updateSession(currentSession.id, messagesWithEdit);
+    
+    // Trigger new streaming response for the edited message
+    await handleSendMessage(newContent);
   };
 
+  // Handle new chat creation
+  const handleNewChat = () => {
+    createNewSession(channelId, channelName);
+    setShowHistoryPopup(false);
+  };
 
+  // Handle loading a specific chat session
+  const handleLoadSession = (sessionId: string) => {
+    loadSession(sessionId);
+  };
+
+  // Handle deleting a chat session
+  const handleDeleteSession = (sessionId: string) => {
+    deleteSession(sessionId);
+  };
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
       {/* Messages Area */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-6 pt-8 pb-4"
+        className={`flex-1 overflow-y-auto px-6 pt-8 pb-4 max-h-[72vh] relative ${
+          showHistoryPopup ? 'after:absolute after:inset-0 after:bg-black/10 after:backdrop-blur-sm after:z-30' : ''
+        }`}
       >
         <AnimatePresence>
           {messages.map((message) => (
@@ -134,24 +256,6 @@ export default function ChatInterface({
           ))}
         </AnimatePresence>
 
-        {/* Typing Indicator */}
-        <AnimatePresence>
-          {isAssistantTyping && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="mb-6"
-            >
-              <div className="flex items-center gap-2 text-gray-500">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">AI is thinking...</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         <div ref={messagesEndRef} />
       </div>
 
@@ -160,13 +264,57 @@ export default function ChatInterface({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2 }}
-        className="flex-shrink-0 px-6 py-4 border-t border-gray-100 bg-gradient-to-r from-gray-50/50 to-white"
+        className="flex-shrink-0 px-6 py-4 border-t border-gray-100 bg-gradient-to-r from-gray-50/50 to-white relative"
       >
-        <ChatInput
-          placeholder={`Ask anything about ${channelName}...`}
-          onSend={handleSendMessage}
-          disabled={isAssistantTyping}
-        />
+        <div className="flex items-end space-x-3">
+          {/* Action Icons */}
+          <div className="flex items-center space-x-2 pb-2 relative">
+            {/* Chat History Button */}
+            <motion.button
+              whileHover={{ scale: 1.05, backgroundColor: "rgba(99, 102, 241, 0.1)" }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowHistoryPopup(!showHistoryPopup)}
+              className={`p-2 rounded-lg transition-all duration-200 border ${
+                showHistoryPopup
+                  ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                  : 'hover:bg-indigo-50 text-indigo-600 hover:text-indigo-700 border-transparent hover:border-indigo-200/50'
+              }`}
+              title="Chat History"
+            >
+              <List className="w-5 h-5" strokeWidth={2} />
+            </motion.button>
+
+            {/* Chat History Popup */}
+            <ChatHistoryPopup
+              isOpen={showHistoryPopup}
+              onClose={() => setShowHistoryPopup(false)}
+              currentSession={currentSession}
+              recentSessions={recentSessions}
+              onLoadSession={handleLoadSession}
+              onDeleteSession={handleDeleteSession}
+            />
+
+            {/* New Chat Button */}
+            <motion.button
+              whileHover={{ scale: 1.05, backgroundColor: "rgba(99, 102, 241, 0.1)" }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleNewChat}
+              className="p-2 rounded-lg hover:bg-indigo-50 text-indigo-600 hover:text-indigo-700 transition-all duration-200 border border-transparent hover:border-indigo-200/50"
+              title="New Chat"
+            >
+              <Plus className="w-5 h-5" strokeWidth={2} />
+            </motion.button>
+          </div>
+
+          {/* Chat Input */}
+          <div className="flex-1">
+            <ChatInput
+              placeholder={`Ask anything about ${channelName}...`}
+              onSend={handleSendMessage}
+              disabled={isAssistantTyping}
+            />
+          </div>
+        </div>
       </motion.div>
     </div>
   );

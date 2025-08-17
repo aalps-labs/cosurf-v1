@@ -189,7 +189,7 @@ export default function AuthDebugInfo() {
                 </div>
                 <div className="text-right">
                   <div className="text-green-600">{channel.followers_count} followers</div>
-                  <div className="text-purple-600">Rep: {channel.rep_score}</div>
+                  <div className="text-purple-600">Staking: {((channel.rep_score || 0) / 1000).toFixed(3)} ETH</div>
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t text-gray-500">

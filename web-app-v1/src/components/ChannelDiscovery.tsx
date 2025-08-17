@@ -5,6 +5,10 @@ import { buildApiUrl, makeApiRequest } from '@/lib/api-config';
 import { useRouter } from 'next/navigation';
 import { useUserData } from './auth/DataProvider';
 import { useLoginTrigger } from './auth/LoginTriggerContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Users, Coins, Star, Sparkles, TrendingUp, Eye, Heart, Zap } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Channel {
   id: string;
@@ -49,6 +53,33 @@ export default function ChannelDiscovery() {
   const [followingInProgress, setFollowingInProgress] = useState<Set<string>>(new Set());
   
   const CHANNELS_PER_PAGE = 12;
+
+  // Markdown components configuration for descriptions
+  const markdownComponents = {
+    h1: ({ children }: any) => <h1 className="text-sm font-semibold text-gray-800 mb-1">{children}</h1>,
+    h2: ({ children }: any) => <h2 className="text-sm font-medium text-gray-700 mb-1">{children}</h2>,
+    h3: ({ children }: any) => <h3 className="text-xs font-medium text-gray-700 mb-1">{children}</h3>,
+    p: ({ children }: any) => <p className="text-gray-600 text-xs leading-relaxed mb-1">{children}</p>,
+    ul: ({ children }: any) => <ul className="list-disc list-inside text-gray-600 text-xs space-y-0.5 mb-1">{children}</ul>,
+    ol: ({ children }: any) => <ol className="list-decimal list-inside text-gray-600 text-xs space-y-0.5 mb-1">{children}</ol>,
+    li: ({ children }: any) => <li className="text-gray-600 text-xs">{children}</li>,
+    strong: ({ children }: any) => <strong className="font-semibold text-gray-700">{children}</strong>,
+    em: ({ children }: any) => <em className="italic text-gray-600">{children}</em>,
+    code: ({ children }: any) => <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono text-gray-700">{children}</code>,
+    a: ({ href, children }: any) => (
+      <a 
+        href={href} 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        className="text-indigo-600 hover:text-indigo-800 underline text-xs"
+      >
+        {children}
+      </a>
+    ),
+    // Simplify other elements for compact display
+    pre: ({ children }: any) => <div className="bg-gray-100 p-1 rounded text-xs font-mono text-gray-700 mb-1">{children}</div>,
+    blockquote: ({ children }: any) => <div className="border-l-2 border-gray-300 pl-2 text-gray-600 text-xs mb-1">{children}</div>,
+  };
 
   // User channels are now loaded globally via DataProvider
 
@@ -340,191 +371,506 @@ export default function ChannelDiscovery() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">
-          Discover Channels
-        </h2>
-        <p className="text-lg text-gray-600 mb-8">
-          Find and follow channels that match your interests
-        </p>
-        
-        {!hasChannelData && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl mx-auto">
-            <p className="text-sm text-blue-800">
-              <strong>Discover amazing channels!</strong> Sign in to follow channels and get personalized recommendations.
-            </p>
-          </div>
-        )}
-        
-        {/* Search Bar */}
-        <div className="max-w-2xl mx-auto">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              placeholder="Search channels by name or description..."
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="block w-full pl-10 pr-3 py-4 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-lg"
-            />
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-2000"></div>
+        <div className="absolute top-40 left-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-4000"></div>
       </div>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">Loading channels...</p>
-        </div>
-      )}
+      {/* Floating Particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(20)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 bg-white rounded-full opacity-30"
+            animate={{
+              y: [0, -100, 0],
+              x: [0, Math.random() * 100 - 50, 0],
+              opacity: [0.3, 0.8, 0.3],
+            }}
+            transition={{
+              duration: Math.random() * 3 + 2,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+            }}
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+          />
+        ))}
+      </div>
 
-      {/* Error State */}
-      {error && (
-        <div className="text-center py-12">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
-            <p className="text-red-700">{error}</p>
-            <button 
-              onClick={() => fetchChannelsAndFollowStatus()}
-              className="mt-2 text-red-600 hover:text-red-800 font-medium"
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-12">
+        {/* Hero Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-16"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 1, delay: 0.2 }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full mb-6"
+          >
+            <Sparkles className="w-4 h-4 text-yellow-400" />
+            <span className="text-white/90 text-sm font-medium">Discover Amazing Channels</span>
+            <Sparkles className="w-4 h-4 text-yellow-400" />
+          </motion.div>
+
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="text-6xl font-bold bg-gradient-to-r from-white via-purple-200 to-cyan-200 bg-clip-text text-transparent mb-6"
+          >
+            Surf Search
+          </motion.h1>
+          
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="text-xl text-white/70 mb-12 max-w-2xl mx-auto"
+          >
+            Explore a cosmos of creativity, connect with visionaries, and stake your claim in the future of content
+          </motion.p>
+          
+          {!hasChannelData && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="mb-8 p-6 bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/20 rounded-2xl max-w-2xl mx-auto"
             >
-              Try again
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Channels Grid */}
-      {!loading && !error && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedChannels.map((channel) => (
-              <div key={channel.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
-                <div className="p-6">
-                  <div 
-                    className="flex items-start space-x-4 cursor-pointer"
-                    onClick={() => handleChannelClick(channel.id)}
-                  >
-                    <div className="flex-shrink-0">
-                      <img
-                        className="h-12 w-12 rounded-full object-cover"
-                        src={generateAvatarUrl(channel.name)}
-                        alt={channel.name}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors">
-                        {channel.name}
-                      </h3>
-                      <p className="text-sm text-gray-500 truncate">
-                        @{channel.channel_handle}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                        {channel.description || 'No description available'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 flex items-center justify-between">
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <span className="flex items-center">
-                        <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        {channel.followers_count?.toLocaleString() || 0}
-                      </span>
-                      <span>{formatDate(channel.created_at)}</span>
-                    </div>
-                    
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent triggering channel navigation
-                        handleFollowToggle(channel.id);
-                      }}
-                      disabled={followingInProgress.has(channel.id)}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2 ${
-                        channel.is_following
-                          ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      } ${
-                        followingInProgress.has(channel.id)
-                          ? 'opacity-50 cursor-not-allowed' 
-                          : ''
-                      }`}
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <Zap className="w-5 h-5 text-yellow-400" />
+                <span className="text-white font-semibold">Unlock the Experience</span>
+                <Zap className="w-5 h-5 text-yellow-400" />
+              </div>
+              <p className="text-white/80">
+                Sign in to follow channels, stake on creators, and get personalized recommendations tailored just for you
+              </p>
+            </motion.div>
+          )}
+          
+          {/* Search Bar */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="max-w-2xl mx-auto"
+          >
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-300"></div>
+              <div className="relative bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-1">
+                <div className="flex items-center">
+                  <div className="pl-6 pr-3 flex items-center pointer-events-none">
+                    <motion.div
+                      animate={{ rotate: searchQuery ? 360 : 0 }}
+                      transition={{ duration: 0.5 }}
                     >
-                      {followingInProgress.has(channel.id) && (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                      )}
-                      {followingInProgress.has(channel.id) 
-                        ? 'Processing...' 
-                        : channel.is_following 
-                          ? 'Following' 
-                          : 'Follow'
-                      }
-                    </button>
+                      <Eye className="h-5 w-5 text-white/60" />
+                    </motion.div>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search the channel universe..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="flex-1 py-4 bg-transparent text-white placeholder-white/50 focus:outline-none text-lg font-medium"
+                  />
+                  <div className="pr-2">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-purple-500/25 transition-all duration-300"
+                    >
+                      Explore
+                    </motion.button>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          </motion.div>
+        </motion.div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-8 flex justify-center">
-              <nav className="flex items-center space-x-2">
-                <button
-                  onClick={() => handlePageChange(page - 1)}
-                  disabled={page <= 1}
-                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={`px-3 py-2 rounded-md text-sm font-medium ${
-                        pageNum === page
-                          ? 'bg-blue-600 text-white'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
+        {/* Loading State */}
+        {loading && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-20"
+          >
+            <div className="relative">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                className="w-16 h-16 mx-auto mb-6"
+              >
+                <div className="w-full h-full border-4 border-purple-500/30 border-t-purple-500 rounded-full"></div>
+              </motion.div>
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute top-4 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full blur-sm"
+              ></motion.div>
+            </div>
+            <motion.p 
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="text-white/80 text-lg font-medium"
+            >
+              Discovering amazing channels...
+            </motion.p>
+          </motion.div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-12"
+          >
+            <div className="bg-red-500/10 backdrop-blur-sm border border-red-500/20 rounded-2xl p-8 max-w-md mx-auto">
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 0.5, repeat: 2 }}
+                className="w-12 h-12 mx-auto mb-4 bg-red-500/20 rounded-full flex items-center justify-center"
+              >
+                <Zap className="w-6 h-6 text-red-400" />
+              </motion.div>
+              <p className="text-red-300 mb-4 font-medium">{error}</p>
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => fetchChannelsAndFollowStatus()}
+                className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-red-500/25 transition-all duration-300"
+              >
+                Try Again
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Channels Grid */}
+        {!loading && !error && (
+          <div>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            >
+              <AnimatePresence>
+                {paginatedChannels.map((channel, index) => (
+                  <motion.div
+                    key={channel.id}
+                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                    transition={{ 
+                      duration: 0.5, 
+                      delay: index * 0.1,
+                      type: "spring",
+                      stiffness: 100
+                    }}
+                    whileHover={{ y: -8, scale: 1.02 }}
+                    className="group relative"
+                  >
+                    {/* Glow Effect */}
+                    <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 via-cyan-500 to-pink-500 rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+                    
+                    {/* Main Card */}
+                    <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden">
+                      {/* Top Gradient Bar */}
+                      <div className="h-1 bg-gradient-to-r from-purple-500 via-cyan-500 to-pink-500"></div>
+                      
+                      <div className="p-6">
+                        {/* First Line: Avatar, Name, Handle, Follow Button */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div 
+                            className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer group/header"
+                            onClick={() => handleChannelClick(channel.id)}
+                          >
+                            {/* Avatar with Glow */}
+                            <div className="relative flex-shrink-0">
+                              <motion.div
+                                whileHover={{ scale: 1.1, rotate: 5 }}
+                                className="relative"
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-xl blur opacity-50"></div>
+                                <img
+                                  className="relative h-12 w-12 rounded-xl object-cover border-2 border-white/30"
+                                  src={generateAvatarUrl(channel.name)}
+                                  alt={channel.name}
+                                />
+                              </motion.div>
+                              
+                              {/* Status Indicator */}
+                              <motion.div 
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                                className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white/50 shadow-lg"
+                              ></motion.div>
+                            </div>
+                            
+                            {/* Channel Info */}
+                            <div className="flex-1 min-w-0">
+                              <motion.h3 
+                                className="text-lg font-bold text-white group-hover/header:text-transparent group-hover/header:bg-gradient-to-r group-hover/header:from-purple-400 group-hover/header:to-cyan-400 group-hover/header:bg-clip-text transition-all duration-300 truncate"
+                              >
+                                {channel.name}
+                              </motion.h3>
+                              <p className="text-white/60 text-sm truncate">
+                                {channel.channel_handle}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Follow Button */}
+                          <motion.button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFollowToggle(channel.id);
+                            }}
+                            disabled={followingInProgress.has(channel.id)}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center gap-2 flex-shrink-0 ${
+                              channel.is_following
+                                ? 'bg-white/20 text-white hover:bg-white/30 border border-white/30'
+                                : 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white hover:shadow-lg hover:shadow-purple-500/25'
+                            } ${
+                              followingInProgress.has(channel.id)
+                                ? 'opacity-50 cursor-not-allowed' 
+                                : ''
+                            }`}
+                          >
+                            {followingInProgress.has(channel.id) ? (
+                              <>
+                                <motion.div
+                                  animate={{ rotate: 360 }}
+                                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                  className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                                />
+                                <span className="hidden sm:inline">Processing</span>
+                              </>
+                            ) : channel.is_following ? (
+                              <>
+                                <Heart className="w-4 h-4 fill-current" />
+                                <span className="hidden sm:inline">Following</span>
+                              </>
+                            ) : (
+                              <>
+                                <Star className="w-4 h-4" />
+                                <span className="hidden sm:inline">Follow</span>
+                              </>
+                            )}
+                          </motion.button>
+                        </div>
+                        
+                        {/* Second Line: Followers and Staking Stats */}
+                        <div className="flex items-center space-x-6">
+                          {/* Followers */}
+                          <motion.div 
+                            whileHover={{ scale: 1.05 }}
+                            className="flex items-center space-x-2 group/stat"
+                          >
+                            <div className="p-1.5 bg-white/10 rounded-lg group-hover/stat:bg-white/20 transition-colors">
+                              <Users className="w-3.5 h-3.5 text-cyan-400" />
+                            </div>
+                            <div>
+                              <p className="text-white/50 text-xs">Followers</p>
+                              <p className="text-white font-semibold text-sm">
+                                {channel.followers_count?.toLocaleString() || 0}
+                              </p>
+                            </div>
+                          </motion.div>
+                          
+                          {/* Staking */}
+                          <motion.div 
+                            whileHover={{ scale: 1.05 }}
+                            className="flex items-center space-x-2 group/stat"
+                          >
+                            <div className="p-1.5 bg-white/10 rounded-lg group-hover/stat:bg-white/20 transition-colors">
+                              <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                            </div>
+                            <div>
+                              <p className="text-white/50 text-xs">Staking</p>
+                              <p className="text-white font-semibold text-sm">
+                                {((channel.rep_score || 0) / 1000).toFixed(3)} ETH
+                              </p>
+                            </div>
+                          </motion.div>
+                        </div>
+                      </div>
+                      
+                      {/* Description Section */}
+                      {channel.description && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.1 }}
+                          className="bg-white/95 backdrop-blur-sm border-t border-white/20 p-4"
+                        >
+                          <div className="prose prose-xs max-w-none line-clamp-3 overflow-hidden">
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]} 
+                              components={markdownComponents}
+                            >
+                              {channel.description}
+                            </ReactMarkdown>
+                          </div>
+                        </motion.div>
+                      )}
+                      
+                      {/* Hover Overlay */}
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        whileHover={{ opacity: 1 }}
+                        className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-cyan-500/10 pointer-events-none"
+                      />
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="mt-16 flex justify-center"
+              >
+                <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-2">
+                  <nav className="flex items-center space-x-2">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handlePageChange(page - 1)}
+                      disabled={page <= 1}
+                      className="px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
                     >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                
-                <button
-                  onClick={() => handlePageChange(page + 1)}
-                  disabled={page >= totalPages}
-                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </nav>
-            </div>
-          )}
+                      Previous
+                    </motion.button>
+                    
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
+                      return (
+                        <motion.button
+                          key={pageNum}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                            pageNum === page
+                              ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-lg'
+                              : 'text-white/70 hover:text-white hover:bg-white/10'
+                          }`}
+                        >
+                          {pageNum}
+                        </motion.button>
+                      );
+                    })}
+                    
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handlePageChange(page + 1)}
+                      disabled={page >= totalPages}
+                      className="px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+                    >
+                      Next
+                    </motion.button>
+                  </nav>
+                </div>
+              </motion.div>
+            )}
 
-          {/* Empty State */}
-          {filteredChannels.length === 0 && searchQuery && (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No channels found</h3>
-              <p className="mt-1 text-sm text-gray-500">Try adjusting your search terms.</p>
-            </div>
-          )}
-        </>
-      )}
+            {/* Empty State */}
+            {filteredChannels.length === 0 && searchQuery && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6 }}
+                className="text-center py-20"
+              >
+                <motion.div
+                  animate={{ 
+                    rotate: [0, 10, -10, 0],
+                    scale: [1, 1.1, 1]
+                  }}
+                  transition={{ 
+                    duration: 4, 
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="mx-auto w-24 h-24 mb-8 bg-white/10 backdrop-blur-sm rounded-3xl flex items-center justify-center border border-white/20"
+                >
+                  <Eye className="w-12 h-12 text-white/60" />
+                </motion.div>
+                <h3 className="text-2xl font-bold text-white mb-4">No Channels Found</h3>
+                <p className="text-white/60 text-lg mb-8 max-w-md mx-auto">
+                  The universe is vast, but we couldn&apos;t find channels matching &quot;{searchQuery}&quot;. Try exploring different terms.
+                </p>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleSearchChange('')}
+                  className="px-8 py-4 bg-gradient-to-r from-purple-500 to-cyan-500 text-white rounded-2xl font-semibold hover:shadow-lg hover:shadow-purple-500/25 transition-all duration-300"
+                >
+                  Clear Search
+                </motion.button>
+              </motion.div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {/* Custom Styles */}
+      <style jsx>{`
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .prose-xs {
+          font-size: 0.75rem;
+          line-height: 1rem;
+        }
+        .prose-xs p {
+          margin-bottom: 0.25rem;
+        }
+        .prose-xs h1, .prose-xs h2, .prose-xs h3 {
+          margin-bottom: 0.25rem;
+          margin-top: 0;
+        }
+        .prose-xs ul, .prose-xs ol {
+          margin-bottom: 0.25rem;
+          margin-top: 0;
+        }
+      `}</style>
     </div>
   );
 }
