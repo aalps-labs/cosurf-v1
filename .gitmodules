@@ -4,3 +4,7 @@
 [submodule "submodules/cdp-sdk-python"]
 	path = submodules/cdp-sdk-python
 	url = https://github.com/coinbase/cdp-sdk-python.git
+[submodule "submodules/devtools"]
+	path = submodules/devtools
+	url = https://github.com/LayerZero-Labs/devtools.git
+	branch = main
