@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { buildApiUrl, makeApiRequest } from '@/lib/api-config';
 import { useRouter } from 'next/navigation';
 import { useUserData } from './auth/DataProvider';
+import { useLoginTrigger } from './auth/LoginTriggerContext';
 
 interface Channel {
   id: string;
@@ -35,7 +36,8 @@ interface FollowStatus {
 
 export default function ChannelDiscovery() {
   const router = useRouter();
-  const { userChannels } = useUserData(); // Get user channels from global context
+  const { userChannels, hasChannelData } = useUserData(); // Get user channels from global context
+  const { triggerLogin } = useLoginTrigger();
   const [searchQuery, setSearchQuery] = useState('');
   const [allChannels, setAllChannels] = useState<Channel[]>([]);
   const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
@@ -52,10 +54,7 @@ export default function ChannelDiscovery() {
 
   // Fetch channels and following status (following the same pattern as the provided page.tsx)
   const fetchChannelsAndFollowStatus = useCallback(async () => {
-    if (userChannels.length === 0) {
-      console.log('⏳ No user channels loaded yet, skipping fetch');
-      return;
-    }
+    // Always fetch channels, but only fetch follow status if user has channels
 
     setLoading(true);
     setError(null);
@@ -83,19 +82,19 @@ export default function ChannelDiscovery() {
 
       const channelsData: ChannelSearchResponse = await channelsResponse.json();
       
-      // Filter out user's own channels (same as provided code)
-      const userChannelIds = new Set(userChannels.map(channel => channel.id));
+      // Filter out user's own channels only if user has channels
+      const userChannelIds = hasChannelData ? new Set(userChannels.map(channel => channel.id)) : new Set();
       const otherChannels = (channelsData.channels || []).filter(channel => 
         !userChannelIds.has(channel.id)
       );
 
-      // Get follow status for each channel (following the exact pattern from provided code)
-      const followerChannel = userChannels[0]; // Use first user channel as follower
+      // Get follow status for each channel only if user has channels
+      const followerChannel = hasChannelData ? userChannels[0] : null;
       const channelsWithFollowStatus: Channel[] = await Promise.all(
         otherChannels.slice(0, 20).map(async (channel) => {
           let followStatus = { is_following: false, is_muted: false };
           
-          if (followerChannel) {
+          if (followerChannel && hasChannelData) {
             try {
               // Make individual follow status check (same as provided code)
               const response = await makeApiRequest(
@@ -143,7 +142,8 @@ export default function ChannelDiscovery() {
         total: channelsData.channels?.length || 0,
         userOwned: userChannelIds.size,
         showing: channelsWithFollowStatus.length,
-        following: followingIds.size
+        following: followingIds.size,
+        hasChannelData
       });
       
     } catch (err) {
@@ -155,7 +155,7 @@ export default function ChannelDiscovery() {
     } finally {
       setLoading(false);
     }
-  }, [userChannels]);
+  }, [hasChannelData, userChannels]);
 
   // Client-side full-text search function
   const performClientSearch = useCallback((query: string) => {
@@ -189,8 +189,10 @@ export default function ChannelDiscovery() {
 
   // Handle follow/unfollow action
   const handleFollowToggle = async (channelId: string) => {
-    if (userChannels.length === 0) {
-      console.warn('No user channels available for following');
+    // Check if user has channel data first
+    if (!hasChannelData) {
+      console.log('User has no channel data, triggering login');
+      triggerLogin();
       return;
     }
 
@@ -304,12 +306,10 @@ export default function ChannelDiscovery() {
     }
   };
 
-  // Fetch channels and follow status when user channels are available
+  // Fetch channels always, follow status only when user has channel data
   useEffect(() => {
-    if (userChannels.length > 0) {
-      fetchChannelsAndFollowStatus();
-    }
-  }, [userChannels, fetchChannelsAndFollowStatus]);
+    fetchChannelsAndFollowStatus();
+  }, [fetchChannelsAndFollowStatus]);
 
   // Calculate pagination for filtered results
   const totalPages = Math.ceil(filteredChannels.length / CHANNELS_PER_PAGE);
@@ -349,11 +349,10 @@ export default function ChannelDiscovery() {
           Find and follow channels that match your interests
         </p>
         
-        {userChannels.length === 0 && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg max-w-2xl mx-auto">
-            <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> You need to connect your channels to follow other channels. 
-              Please complete your account setup first.
+        {!hasChannelData && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl mx-auto">
+            <p className="text-sm text-blue-800">
+              <strong>Discover amazing channels!</strong> Sign in to follow channels and get personalized recommendations.
             </p>
           </div>
         )}
@@ -447,13 +446,13 @@ export default function ChannelDiscovery() {
                         e.stopPropagation(); // Prevent triggering channel navigation
                         handleFollowToggle(channel.id);
                       }}
-                      disabled={userChannels.length === 0 || followingInProgress.has(channel.id)}
+                      disabled={followingInProgress.has(channel.id)}
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2 ${
                         channel.is_following
                           ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                           : 'bg-blue-600 text-white hover:bg-blue-700'
                       } ${
-                        userChannels.length === 0 || followingInProgress.has(channel.id)
+                        followingInProgress.has(channel.id)
                           ? 'opacity-50 cursor-not-allowed' 
                           : ''
                       }`}

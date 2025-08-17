@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePrivy } from '@privy-io/react-auth';
 import { useUserData } from './DataProvider';
+import { useLoginTrigger } from './LoginTriggerContext';
 import LoginModal from './LoginModal';
 import ChannelConnectionModal from './ChannelConnectionModal';
 import { 
@@ -18,6 +19,7 @@ import {
 export default function LoginButton() {
   const { authenticated, user, ready } = usePrivy();
   const { userChannels, hasChannelData } = useUserData();
+  const { setLoginTrigger } = useLoginTrigger();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -27,6 +29,11 @@ export default function LoginButton() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Register login trigger function
+  useEffect(() => {
+    setLoginTrigger(() => setShowLoginModal(true));
+  }, [setLoginTrigger]);
 
   // Check if user has already completed setup
   const hasCompletedSetup = () => {

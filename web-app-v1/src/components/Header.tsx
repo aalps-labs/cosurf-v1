@@ -96,6 +96,12 @@ export default function Header() {
       // Clear any cached data
       localStorage.removeItem('connected_channels');
       localStorage.removeItem('channel_connection_timestamp');
+      
+      console.log('✅ Logout completed - refreshing site');
+      // Small delay to let any final cleanup complete, then refresh
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     } catch (error) {
       console.error('Logout error:', error);
     }
