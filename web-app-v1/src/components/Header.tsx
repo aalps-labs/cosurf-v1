@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePrivy } from '@privy-io/react-auth';
 import { useUserData } from './auth/DataProvider';
 import LoginButton from './auth/LoginButton';
+import { getCurrentAvatarUrl } from '@/lib/avatar-utils';
 import { 
   Search, 
   Bell, 
@@ -85,8 +86,17 @@ export default function Header() {
 
   const userBadge = getUserBadge();
 
-  const generateAvatarUrl = (name: string) => {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff&size=40&font-size=0.4&bold=true`;
+  // State for avatar error handling
+  const [failedAvatars, setFailedAvatars] = useState<Map<string, number>>(new Map());
+
+  // Handle avatar load error
+  const handleAvatarError = (channelId: string) => {
+    setFailedAvatars(prev => {
+      const newMap = new Map(prev);
+      const currentFailures = newMap.get(channelId) || 0;
+      newMap.set(channelId, currentFailures + 1);
+      return newMap;
+    });
   };
 
   const handleLogout = async () => {
@@ -243,9 +253,14 @@ export default function Header() {
                   {/* Avatar */}
                   <div className="relative">
                     <img
-                      src={generateAvatarUrl(user.email?.address || user.id)}
+                      src={getCurrentAvatarUrl(
+                        userChannels[0]?.id || user.id, 
+                        userChannels[0]?.name || user.email?.address?.split('@')[0] || 'User',
+                        failedAvatars.get(userChannels[0]?.id || user.id) || 0
+                      )}
                       alt="Profile"
                       className="w-8 h-8 rounded-full border-2 border-gray-200"
+                      onError={() => handleAvatarError(userChannels[0]?.id || user.id)}
                     />
                     {userBadge && (
                       <motion.div
@@ -301,9 +316,14 @@ export default function Header() {
                       <div className="px-4 py-3 border-b border-gray-50">
                         <div className="flex items-center space-x-3">
                           <img
-                            src={generateAvatarUrl(user.email?.address || user.id)}
+                            src={getCurrentAvatarUrl(
+                              userChannels[0]?.id || user.id, 
+                              userChannels[0]?.name || user.email?.address?.split('@')[0] || 'User',
+                              failedAvatars.get(userChannels[0]?.id || user.id) || 0
+                            )}
                             alt="Profile"
                             className="w-10 h-10 rounded-full"
+                            onError={() => handleAvatarError(userChannels[0]?.id || user.id)}
                           />
                           <div>
                             <p className="font-medium text-gray-900">

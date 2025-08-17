@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { buildApiUrl, makeApiRequest } from '@/lib/api-config';
+import { getCurrentAvatarUrl } from '@/lib/avatar-utils';
 import { useRouter } from 'next/navigation';
 import { useUserData } from './auth/DataProvider';
 import { useLoginTrigger } from './auth/LoginTriggerContext';
@@ -362,81 +363,7 @@ export default function ChannelDiscovery() {
     });
   };
 
-  // Array of 20 diverse avatar URLs with mixed categories: landscapes, memes, anime, objects & abstract
-  const avatarUrls = [
-    // Landscapes & Scenery (5 avatars) 🏞️
-    'https://images.pexels.com/photos/572897/pexels-photo-572897.jpeg',
-    'https://images.pexels.com/photos/36717/amazing-animal-beautiful-beautifull.jpg',
-    'https://images.pexels.com/photos/1528640/pexels-photo-1528640.jpeg',
-    'https://images.pexels.com/photos/53594/blue-clouds-day-fluffy-53594.jpeg',
-    'https://images.pexels.com/photos/210186/pexels-photo-210186.jpeg',
-    
-    // Memes & Funny (5 avatars) 😂
-    'https://i.imgur.com/8QJgR8p.jpeg',
-    'https://i.imgur.com/c4jt321.jpeg',
-    'https://i.imgur.com/Vb4g41U.jpg',
-    'https://i.kym-cdn.com/entries/icons/original/000/018/012/this_is_fine.jpeg',
-    'https://i.kym-cdn.com/entries/icons/original/000/022/138/highresrollsafe.jpg',
-    
-    // Animation & Anime (5 avatars) 🎬
-    'https://i.pinimg.com/originals/a2/27/7b/a2277b5a2982828a2a0ff91799981831.jpg',
-    'https://wallpapercave.com/wp/wp6654767.jpg',
-    'https://assets.mycast.io/characters/lofi-girl-4217117-normal.jpg',
-    'https://wallpapercave.com/wp/wp4989639.jpg',
-    'https://i.pinimg.com/736x/54/e3/ac/54e3ac8ac526f23e1177636e0d043445.jpg',
-    
-    // Objects & Abstract (5 avatars) 🎨
-    'https://images.pexels.com/photos/3408354/pexels-photo-3408354.jpeg',
-    'https://images.unsplash.com/photo-1509343256512-d77a5cb3791b',
-    'https://images.pexels.com/photos/1029141/pexels-photo-1029141.jpeg',
-    'https://images.unsplash.com/photo-1511920170033-f832d72d7d3f',
-    'https://images.pexels.com/photos/1762578/pexels-photo-1762578.jpeg'
-  ];
-
-  // Generate consistent random avatar for each channel based on channel ID
-  const getRandomAvatarUrl = (channelId: string, channelName?: string) => {
-    // Special case: If channel name includes "vitalik", use real Vitalik Buterin photo
-    if (channelName && channelName.toLowerCase().includes('vitalik')) {
-      return 'https://metlabs.io/wp-content/uploads/2023/12/vitalik-buterin-quien-es-ethereum-fundador.jpeg';
-    }
-    
-    // Create a simple hash from channel ID for consistent selection
-    let hash = 0;
-    for (let i = 0; i < channelId.length; i++) {
-      const char = channelId.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    
-    // Use absolute value and modulo to get index within array bounds
-    const index = Math.abs(hash) % avatarUrls.length;
-    return avatarUrls[index];
-  };
-
-  // Get fallback avatar URL if primary fails
-  const getFallbackAvatarUrl = (channelId: string, attemptNumber: number = 0) => {
-    // Create a different hash by adding attempt number to ensure different result
-    let hash = attemptNumber;
-    for (let i = 0; i < channelId.length; i++) {
-      const char = channelId.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char + attemptNumber;
-      hash = hash & hash;
-    }
-    
-    const index = Math.abs(hash) % avatarUrls.length;
-    return avatarUrls[index];
-  };
-
-  // Get current avatar URL considering any failures
-  const getCurrentAvatarUrl = (channelId: string, channelName?: string) => {
-    const failureCount = failedAvatars.get(channelId) || 0;
-    
-    if (failureCount === 0) {
-      return getRandomAvatarUrl(channelId, channelName);
-    } else {
-      return getFallbackAvatarUrl(channelId, failureCount);
-    }
-  };
+  // Avatar logic is now handled by shared utility
 
   // Handle avatar load error
   const handleAvatarError = (channelId: string) => {
@@ -690,7 +617,11 @@ export default function ChannelDiscovery() {
                                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-xl blur opacity-50"></div>
                                 <img
                                   className="relative h-12 w-12 rounded-xl object-cover border-2 border-white/30"
-                                  src={getCurrentAvatarUrl(channel.id, channel.name)}
+                                  src={getCurrentAvatarUrl(
+                                    channel.id, 
+                                    channel.name,
+                                    failedAvatars.get(channel.id) || 0
+                                  )}
                                   alt={channel.name}
                                   onError={() => handleAvatarError(channel.id)}
                                 />

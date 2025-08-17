@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buildApiUrl, makeApiRequest } from '@/lib/api-config';
+import { getCurrentAvatarUrl } from '@/lib/avatar-utils';
 import AuthProvider from '../../../components/auth/AuthProvider';
 import DataProvider from '../../../components/auth/DataProvider';
 import LoginTriggerProvider from '../../../components/auth/LoginTriggerContext';
@@ -41,6 +42,7 @@ function ChannelContent() {
   const [showRecentUpdates, setShowRecentUpdates] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followingInProgress, setFollowingInProgress] = useState(false);
+  const [failedAvatars, setFailedAvatars] = useState<Map<string, number>>(new Map());
   
   // Load channel data (folders and documents)
   const { 
@@ -121,8 +123,14 @@ function ChannelContent() {
     }
   }, [channelId, userChannels]);
 
-  const generateAvatarUrl = (name: string) => {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=000000&color=ffffff&size=120&font-size=0.4&bold=true`;
+  // Handle avatar load error
+  const handleAvatarError = (channelId: string) => {
+    setFailedAvatars(prev => {
+      const newMap = new Map(prev);
+      const currentFailures = newMap.get(channelId) || 0;
+      newMap.set(channelId, currentFailures + 1);
+      return newMap;
+    });
   };
 
   const handleChatMessage = (message: string) => {
@@ -257,8 +265,13 @@ function ChannelContent() {
                           <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-200 group-hover:border-gray-300 transition-colors duration-200">
                             <img
                               className="w-full h-full object-cover"
-                              src={generateAvatarUrl(channelInfo.name)}
+                              src={getCurrentAvatarUrl(
+                                channelInfo.id, 
+                                channelInfo.name,
+                                failedAvatars.get(channelInfo.id) || 0
+                              )}
                               alt={channelInfo.name}
+                              onError={() => handleAvatarError(channelInfo.id)}
                             />
                           </div>
                           
