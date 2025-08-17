@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, Clock, TrendingUp, Zap } from 'lucide-react';
 import QuestionCard from './QuestionCard';
 
-interface RecentlyAskedProps {
+interface OtherChatsProps {
   channelId?: string;
 }
 
@@ -22,20 +22,20 @@ interface Question {
   addedAt?: Date; // For real-time tracking
 }
 
-const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
+const OtherChats: React.FC<OtherChatsProps> = ({ channelId }) => {
   const [mode, setMode] = useState<'trending' | 'realtime'>('trending');
   const [realtimeQuestions, setRealtimeQuestions] = useState<Question[]>([]);
   const [questionQueue, setQuestionQueue] = useState<Question[]>([]);
   const [newestQuestionTime, setNewestQuestionTime] = useState<Date | null>(null);
 
-  // Mock data for Vitalik's channel questions - mixed order, 2-line display
+  // Mock data for Vitalik's channel questions - mixed order, 2-line display with diverse avatars
   const trendingQuestions: Question[] = [
     {
       id: '15',
       question: "Do you ever get tired of people asking you to explain blockchain at parties, and what's your go-to escape strategy?",
       askerName: 'Party Pete',
       askerHandle: 'partypete',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=33',
       askedTime: '4d ago',
       likesCount: 456,
       repliesCount: 123,
@@ -46,7 +46,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "How do you envision Ethereum competing with quantum computing threats in the next decade?",
       askerName: 'Marcus Johnson',
       askerHandle: 'quantumdev',
-      askerAvatar: '',
+      askerAvatar: 'https://robohash.org/marcus?set=set2&size=150x150',
       askedTime: '6h ago',
       likesCount: 89,
       repliesCount: 23,
@@ -57,7 +57,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "Do you have a secret stash of 'I told you so' tweets saved for when Ethereum hits $10k?",
       askerName: 'HODL Hero',
       askerHandle: 'hodlhero',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=hodlhero&size=150',
       askedTime: '6d ago',
       likesCount: 567,
       repliesCount: 145,
@@ -68,7 +68,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "How close are we to Ethereum being truly 'finished' - and what does that even mean to you?",
       askerName: 'James Miller',
       askerHandle: 'jameseth',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=12',
       askedTime: '1d ago',
       likesCount: 134,
       repliesCount: 28,
@@ -79,7 +79,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "If ETH was a Pokemon, what type would it be and what would its special attack be called?",
       askerName: 'Pokemon Master',
       askerHandle: 'pokemonmaster',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=pokemon&size=150',
       askedTime: '4d ago',
       likesCount: 678,
       repliesCount: 187,
@@ -90,7 +90,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's the biggest misconception people have about Ethereum's future that keeps you up at night?",
       askerName: 'Alex Chen',
       askerHandle: 'alexdev',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=68',
       askedTime: '2h ago',
       likesCount: 42,
       repliesCount: 8,
@@ -101,7 +101,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's your take on the environmental criticism of blockchain - is Proof of Stake enough?",
       askerName: 'Green Martinez',
       askerHandle: 'greencrypto',
-      askerAvatar: '',
+      askerAvatar: 'https://robohash.org/green?set=set4&size=150x150',
       askedTime: '3d ago',
       likesCount: 234,
       repliesCount: 76,
@@ -112,7 +112,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "If you had to explain Ethereum using only food metaphors, what would you say?",
       askerName: 'Foodie Crypto',
       askerHandle: 'foodiecrypto',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=foodie&size=150',
       askedTime: '5d ago',
       likesCount: 234,
       repliesCount: 67,
@@ -123,7 +123,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "Which current Ethereum competitor do you secretly respect the most and why?",
       askerName: 'David Park',
       askerHandle: 'blockchainpark',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=51',
       askedTime: '12h ago',
       likesCount: 203,
       repliesCount: 67,
@@ -134,7 +134,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's your honest reaction when people pronounce it 'Ether-EE-um' instead of 'Ether-EH-um'?",
       askerName: 'Grammar Police',
       askerHandle: 'grammarpolice',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/personas/svg?seed=grammar&size=150',
       askedTime: '1w ago',
       likesCount: 789,
       repliesCount: 234,
@@ -145,7 +145,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's your biggest fear about how governments might try to regulate Ethereum?",
       askerName: 'Anna Thompson',
       askerHandle: 'annaregulation',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=44',
       askedTime: '1d ago',
       likesCount: 267,
       repliesCount: 89,
@@ -156,7 +156,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "How do you balance decentralization ideals with the practical need for leadership and direction?",
       askerName: 'Robert Wilson',
       askerHandle: 'robdecentralized',
-      askerAvatar: '',
+      askerAvatar: 'https://robohash.org/robert?set=set1&size=150x150',
       askedTime: '2d ago',
       likesCount: 187,
       repliesCount: 43,
@@ -167,7 +167,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's your honest take on whether DeFi will actually replace traditional banking, or just complement it?",
       askerName: 'Emma Rodriguez',
       askerHandle: 'defiemma',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=25',
       askedTime: '8h ago',
       likesCount: 156,
       repliesCount: 34,
@@ -178,7 +178,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's the most ridiculous thing someone has offered to trade you for ETH, and did you consider it?",
       askerName: 'Trade King',
       askerHandle: 'tradeking',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/big-smile/svg?seed=tradeking&size=150',
       askedTime: '5d ago',
       likesCount: 345,
       repliesCount: 89,
@@ -189,7 +189,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "If Ethereum fails, what do you think will be the primary reason?",
       askerName: 'Michael Brown',
       askerHandle: 'mikecritical',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=60',
       askedTime: '2d ago',
       likesCount: 145,
       repliesCount: 52,
@@ -200,7 +200,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's the most important thing developers building on Ethereum consistently get wrong?",
       askerName: 'Dev Garcia',
       askerHandle: 'devgarcia',
-      askerAvatar: '',
+      askerAvatar: 'https://robohash.org/devgarcia?set=set3&size=150x150',
       askedTime: '3d ago',
       likesCount: 289,
       repliesCount: 94,
@@ -211,7 +211,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "If you could go back to 2013, what would you tell your younger self about building Ethereum differently?",
       askerName: 'Sarah Kim',
       askerHandle: 'sarahcrypto',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=47',
       askedTime: '4h ago',
       likesCount: 67,
       repliesCount: 15,
@@ -222,7 +222,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's the weirdest or most unexpected use case you've seen built on Ethereum?",
       askerName: 'Sophie Davis',
       askerHandle: 'sophieweird',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=sophie&size=150',
       askedTime: '2d ago',
       likesCount: 98,
       repliesCount: 31,
@@ -233,7 +233,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "Which traditional industry do you think Ethereum will disrupt next that people aren't talking about?",
       askerName: 'Future Lee',
       askerHandle: 'futurelee',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/lorelei/svg?seed=future&size=150',
       askedTime: '3d ago',
       likesCount: 156,
       repliesCount: 38,
@@ -244,7 +244,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's the most controversial decision you've made for Ethereum that you still stand by?",
       askerName: 'Lisa Wang',
       askerHandle: 'lisacrypto',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=32',
       askedTime: '1d ago',
       likesCount: 178,
       repliesCount: 45,
@@ -252,14 +252,14 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
     }
   ];
 
-  // Real-time questions pool for rotation
+  // Real-time questions pool for rotation with diverse avatars
   const realtimeQuestionsPool: Question[] = [
     {
       id: 'rt-1',
       question: "What are your thoughts on the recent EIP-4844 implementation and its impact on L2 scaling solutions?",
       askerName: 'Sarah Chen',
       askerHandle: 'sarahdev',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarahchen&size=150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -270,7 +270,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "How do you see account abstraction changing the user experience for mainstream adoption?",
       askerName: 'Alex Rodriguez',
       askerHandle: 'alextech',
-      askerAvatar: '',
+      askerAvatar: 'https://robohash.org/alextech?set=set5&size=150x150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -281,7 +281,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's your perspective on the current state of MEV and its long-term implications for Ethereum?",
       askerName: 'Dr. Emily Wang',
       askerHandle: 'emilywang',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=16',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -292,7 +292,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "How should developers approach building applications that can handle Ethereum's evolving consensus mechanism?",
       askerName: 'Marcus Thompson',
       askerHandle: 'marcusdev',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/micah/svg?seed=marcus&size=150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -303,7 +303,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What role do you see ZK-rollups playing in Ethereum's long-term scalability roadmap?",
       askerName: 'Dr. Lisa Park',
       askerHandle: 'lisapark',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=lisapark&size=150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -314,7 +314,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What are the key considerations for implementing cross-chain interoperability in DeFi protocols?",
       askerName: 'David Kim',
       askerHandle: 'davidkim',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=70',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -325,7 +325,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "How do you evaluate the trade-offs between decentralization and performance in Layer 2 solutions?",
       askerName: 'Prof. Michael Lee',
       askerHandle: 'proflee',
-      askerAvatar: '',
+      askerAvatar: 'https://robohash.org/proflee?set=set1&size=150x150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -336,7 +336,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's your assessment of the current validator economics and staking centralization risks?",
       askerName: 'Dr. Anna Martinez',
       askerHandle: 'annamartinez',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/open-peeps/svg?seed=anna&size=150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -347,7 +347,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "How should enterprises approach integrating Ethereum into their existing financial infrastructure?",
       askerName: 'James Wilson',
       askerHandle: 'jameswilson',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=52',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -358,7 +358,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What are the most promising developments in zero-knowledge proof technology for Ethereum?",
       askerName: 'Dr. Rachel Green',
       askerHandle: 'rachelgreen',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=rachel&size=150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -369,7 +369,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's your view on the regulatory challenges facing DeFi and how should the ecosystem adapt?",
       askerName: 'Jennifer Adams',
       askerHandle: 'jennadams',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=24',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -380,7 +380,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "How do you prioritize security versus innovation when implementing new Ethereum features?",
       askerName: 'Dr. Robert Chang',
       askerHandle: 'robertchang',
-      askerAvatar: '',
+      askerAvatar: 'https://robohash.org/robertchang?set=set2&size=150x150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -391,7 +391,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What are the implications of quantum computing for Ethereum's cryptographic security?",
       askerName: 'Dr. Sophie Miller',
       askerHandle: 'sophiemiller',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=sophie&size=150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -402,7 +402,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "How should we approach governance token design to ensure long-term protocol sustainability?",
       askerName: 'Thomas Anderson',
       askerHandle: 'thomasanderson',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=8',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -413,7 +413,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What's the most effective way to educate traditional finance professionals about Ethereum's capabilities?",
       askerName: 'Maria Gonzalez',
       askerHandle: 'mariagonzalez',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/croodles/svg?seed=maria&size=150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -424,7 +424,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What are your thoughts on the environmental impact of Ethereum post-merge and future sustainability?",
       askerName: 'Dr. Kevin Brown',
       askerHandle: 'kevinbrown',
-      askerAvatar: '',
+      askerAvatar: 'https://robohash.org/kevin?set=set3&size=150x150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -435,7 +435,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "How do you see the evolution of smart contract programming languages beyond Solidity?",
       askerName: 'Dr. Laura Davis',
       askerHandle: 'lauradavis',
-      askerAvatar: '',
+      askerAvatar: 'https://i.pravatar.cc/150?img=31',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -446,7 +446,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What role should formal verification play in ensuring smart contract security at scale?",
       askerName: 'Prof. Alan Taylor',
       askerHandle: 'alantaylor',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=alan&size=150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -457,7 +457,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "What are the key technical challenges in implementing sharding and how close are we to solving them?",
       askerName: 'Dr. Peter Zhang',
       askerHandle: 'peterzhang',
-      askerAvatar: '',
+      askerAvatar: 'https://robohash.org/peter?set=set4&size=150x150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -468,7 +468,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
       question: "How should we balance innovation speed with security auditing in the rapidly evolving DeFi space?",
       askerName: 'Dr. Catherine White',
       askerHandle: 'catherinewhite',
-      askerAvatar: '',
+      askerAvatar: 'https://api.dicebear.com/7.x/rings/svg?seed=catherine&size=150',
       askedTime: '',
       likesCount: 0,
       repliesCount: 0,
@@ -556,13 +556,13 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
     >
       <div className="h-full bg-gradient-to-br from-gray-50 to-blue-50/30 border border-gray-200/60 rounded-xl shadow-sm backdrop-blur-sm flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200/40">
+        <div className="flex items-center justify-between px-6 pt-3 pb-4 border-b border-gray-200/40">
           <div className="flex items-center space-x-3">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg blur-sm opacity-20" />
               <MessageCircle className="w-5 h-5 text-blue-600 relative z-10 drop-shadow-sm" strokeWidth={1.5} />
             </div>
-            <h3 className="text-sm font-semibold text-gray-800 tracking-wide uppercase">Recently Asked</h3>
+            <h3 className="text-sm font-semibold text-gray-800 tracking-wide uppercase">OTHER CHATS</h3>
           </div>
           
           {/* Mode Toggle */}
@@ -648,4 +648,4 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
   );
 };
 
-export default RecentlyAsked;
+export default OtherChats;

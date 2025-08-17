@@ -1,14 +1,13 @@
 'use client';
 
-import { PrivyProvider } from '@privy-io/react-auth';
-import { privyConfig } from '@/lib/auth/privy-config';
 import { useState, useEffect } from 'react';
 
 interface AuthProviderProps {
   children: React.ReactNode;
 }
 
-// Isolated auth provider that won't interfere with other components
+// Legacy auth provider - now just handles mounting state
+// PrivyProvider is now handled at the root level in ClientProviders
 export default function AuthProvider({ children }: AuthProviderProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -17,14 +16,10 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     setMounted(true);
   }, []);
 
-  // Don't render Privy until mounted to prevent SSR issues
+  // Don't render until mounted to prevent SSR issues
   if (!mounted) {
     return <>{children}</>;
   }
 
-  return (
-    <PrivyProvider {...privyConfig}>
-      {children}
-    </PrivyProvider>
-  );
+  return <>{children}</>;
 }

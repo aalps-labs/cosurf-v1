@@ -9,11 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^1.0.5",
+    "@ai-sdk/google": "^1.0.9",
+    "@ai-sdk/openai": "^1.0.8",
     "@ant-design/icons": "^6.0.0",
     "@coinbase/x402": "^0.5.1",
     "@heroicons/react": "^2.2.0",
     "@privy-io/react-auth": "^2.21.3",
     "@privy-io/server-auth": "^1.31.1",
+    "ai": "^4.0.44",
     "antd": "^5.27.0",
     "axios": "^1.11.0",
     "framer-motion": "^12.23.12",

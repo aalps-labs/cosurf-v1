@@ -8,6 +8,8 @@ interface ChatInputProps {
   placeholder?: string;
   disabled?: boolean;
   onSend?: (message: string) => void;
+  onStop?: () => void;
+  isGenerating?: boolean;
   className?: string;
 }
 
@@ -22,12 +24,18 @@ export default function ChatInput({
   placeholder = "Ask anything about this channel...", 
   disabled = false,
   onSend,
+  onStop,
+  isGenerating = false,
   className = ""
 }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [positionAbove, setPositionAbove] = useState(false);
+  const [wasActivelyClicked, setWasActivelyClicked] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Get trending questions from RecentlyAsked data (same mock data)
   const getTrendingQuestions = (): TrendingQuestion[] => {
@@ -76,11 +84,31 @@ export default function ChatInput({
     }
   }, [message]);
 
+  // Check positioning for quick actions
+  useEffect(() => {
+    if (showQuickActions && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const spaceBelow = windowHeight - rect.bottom;
+      const quickActionsHeight = 200; // Approximate height of quick actions
+      
+      setPositionAbove(spaceBelow < quickActionsHeight);
+    }
+  }, [showQuickActions]);
+
+  // Determine if quick actions should show
+  useEffect(() => {
+    const shouldShow = wasActivelyClicked && isFocused && !message.trim();
+    setShowQuickActions(shouldShow);
+  }, [wasActivelyClicked, isFocused, message]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && !disabled && onSend) {
       onSend(message.trim());
       setMessage('');
+      // Keep focus but don't show quick actions after sending
+      setWasActivelyClicked(false);
     }
   };
 
@@ -96,8 +124,28 @@ export default function ChatInput({
     // TODO: Implement voice recording logic
   };
 
+  const handleFocus = () => {
+    setIsFocused(true);
+    setWasActivelyClicked(true);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    // Delay hiding quick actions to allow for clicks
+    setTimeout(() => {
+      setWasActivelyClicked(false);
+    }, 150);
+  };
+
+  const handleQuickActionClick = (action: string) => {
+    setMessage(action);
+    setWasActivelyClicked(false);
+    textareaRef.current?.focus();
+  };
+
   return (
     <motion.div
+      ref={containerRef}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
@@ -134,8 +182,8 @@ export default function ChatInput({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               placeholder={placeholder}
               disabled={disabled}
               rows={1}
@@ -198,19 +246,44 @@ export default function ChatInput({
               </AnimatePresence>
             </motion.button>
 
-            {/* Send Button */}
+            {/* Send/Stop Button */}
             <motion.button
-              type="submit"
-              whileHover={{ scale: message.trim() ? 1.05 : 1 }}
-              whileTap={{ scale: message.trim() ? 0.95 : 1 }}
-              disabled={!message.trim() || disabled}
+              type={isGenerating ? "button" : "submit"}
+              whileHover={{ scale: isGenerating || message.trim() ? 1.05 : 1 }}
+              whileTap={{ scale: isGenerating || message.trim() ? 0.95 : 1 }}
+              disabled={!isGenerating && (!message.trim() || disabled)}
+              onClick={isGenerating ? onStop : undefined}
               className={`p-2.5 rounded-lg transition-all duration-200 flex items-center justify-center ${
-                message.trim() && !disabled
+                isGenerating
+                  ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:shadow-xl hover:from-red-600 hover:to-red-700'
+                  : message.trim() && !disabled
                   ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:shadow-xl hover:from-indigo-600 hover:to-purple-700'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
-              <Send className="w-4 h-4" strokeWidth={2} />
+              <AnimatePresence mode="wait">
+                {isGenerating ? (
+                  <motion.div
+                    key="stop"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="flex items-center justify-center"
+                  >
+                    <Square className="w-4 h-4" fill="currentColor" strokeWidth={0} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="send"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="flex items-center justify-center"
+                  >
+                    <Send className="w-4 h-4" strokeWidth={2} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.button>
           </div>
         </form>
@@ -265,13 +338,17 @@ export default function ChatInput({
 
       {/* Quick Actions and Trending Questions */}
       <AnimatePresence>
-        {isFocused && !message && (
+        {showQuickActions && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: positionAbove ? -10 : 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
+            exit={{ opacity: 0, y: positionAbove ? -10 : 10 }}
             transition={{ duration: 0.2, delay: 0.1 }}
-            className="absolute top-full left-0 right-0 mt-2 z-10"
+            className={`absolute left-0 right-0 z-10 ${
+              positionAbove 
+                ? 'bottom-full mb-2' 
+                : 'top-full mt-2'
+            }`}
           >
             <div className="bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden">
               <div className="flex">
@@ -284,7 +361,7 @@ export default function ChatInput({
                         key={question.id}
                         whileHover={{ scale: 1.01, backgroundColor: "rgba(99, 102, 241, 0.02)" }}
                         whileTap={{ scale: 0.99 }}
-                        onClick={() => setMessage(question.question)}
+                        onClick={() => handleQuickActionClick(question.question)}
                         className="w-full text-left p-2 rounded-lg hover:bg-gray-50 transition-all duration-200 group"
                       >
                         <div className="text-xs text-gray-700 line-clamp-2 group-hover:text-gray-900">
@@ -316,7 +393,7 @@ export default function ChatInput({
                         key={item.label}
                         whileHover={{ scale: 1.02, backgroundColor: "rgba(99, 102, 241, 0.05)" }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => setMessage(item.action)}
+                        onClick={() => handleQuickActionClick(item.action)}
                         className="w-full flex items-center space-x-2 p-2 text-left text-sm text-gray-600 hover:text-gray-900 rounded-lg transition-all duration-200"
                       >
                         <span className="text-base">{item.icon}</span>
