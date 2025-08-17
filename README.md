@@ -210,7 +210,7 @@ X-PAYMENT-RESPONSE: eyJzdWNjZXNzIjp0cnVlLCJ0cmFuc2FjdGlvbiI6IjB4YWJjZGVmMTIzNCIs
 - **Temporal Validation**: Time-bound authorizations prevent replay attacks
 - **Balance Verification**: Pre-flight balance checks ensure payment viability
 - **Non-custodial**: Facilitator never holds user funds
-- **Multi-network**: Support for Base, Avalanche, IoTeX networks
+- **Multi-network**: Support for Base, Arbitrum, Optimism networks
 
 ## 🏦 Curator Economy
 
@@ -291,25 +291,6 @@ POST /api/v1/curators/register
   "content_focus": ["research", "market_analysis"]
 }
 
-// Curator performance metrics
-GET /api/v1/curators/{id}/metrics
-{
-  "earnings": {
-    "total": "2450.75",
-    "monthly": "185.20",
-    "currency": "USDC"
-  },
-  "engagement": {
-    "users_served": 1247,
-    "satisfaction_score": 4.7,
-    "repeat_users": 0.68
-  },
-  "content_impact": {
-    "questions_answered": 342,
-    "recommendations_made": 156,
-    "follow_ups_generated": 89
-  }
-}
 ```
 
 ### Payment API
@@ -363,93 +344,6 @@ npm run test:load:search
 
 ## 📈 Monitoring & Analytics
 
-### Key Metrics Tracked
-
-- **Content Quality**: User satisfaction scores and curator performance
-- **Curation Effectiveness**: Relevance scores and engagement metrics
-- **Value Exchange**: Fair compensation distribution to curators
-- **Network Health**: Cross-chain transaction success rates
-- **User Experience**: Time-to-value and attention respect metrics
-- **Knowledge Discovery**: Question-answer success rates and learning outcomes
-
-### Monitoring Stack
-
-- **Application**: Next.js built-in analytics
-- **Blockchain**: Custom event indexing via viem
-- **Performance**: Vercel analytics and monitoring
-- **Errors**: Integrated error tracking and alerting
-
-## 🛡️ Security
-
-### Smart Contract Security
-
-- **Audited Contracts**: ERC-4626 and LayerZero OFT implementations
-- **Formal Verification**: Critical payment logic mathematically proven
-- **Multi-sig Controls**: Admin functions require multiple signatures
-- **Upgrade Patterns**: Transparent proxy patterns for safe upgrades
-
-### API Security
-
-- **Rate Limiting**: Per-user and per-IP request limits
-- **Input Validation**: Comprehensive schema validation
-- **Authentication**: Privy-based wallet authentication
-- **CORS**: Proper cross-origin resource sharing policies
-
-## 🤝 Contributing
-
-### Development Workflow
-
-1. **Fork & Clone**: Create your own fork of the repository
-2. **Feature Branch**: `git checkout -b feature/your-feature-name`
-3. **Development**: Make changes with comprehensive tests
-4. **Testing**: Ensure all tests pass and coverage is maintained
-5. **Pull Request**: Submit PR with detailed description
-
-### Code Standards
-
-- **TypeScript**: Strict mode enabled, full type coverage
-- **Linting**: ESLint + Prettier for consistent formatting
-- **Testing**: Jest for unit tests, Playwright for E2E
-- **Documentation**: Comprehensive JSDoc for all public APIs
-
-### Contribution Areas
-
-- 🔍 **Search Enhancement**: Improve AI curation algorithms
-- 💰 **Payment Optimization**: Enhance x402 protocol efficiency
-- 🌐 **Network Expansion**: Add support for new blockchain networks
-- 🎨 **UI/UX**: Frontend improvements and accessibility
-- 📊 **Analytics**: Enhanced metrics and reporting features
-
-## 📋 Roadmap
-
-### Phase 1: Foundation (Current)
-- [x] Curator Router Engine core functionality
-- [x] x402 micropayment integration
-- [x] Multi-auth system (Privy integration)
-- [x] OmniVault cross-chain infrastructure
-- [ ] Interactive Q&A system
-- [ ] Basic curator onboarding
-
-### Phase 2: Enhanced Curation (Q2 2024)
-- [ ] Advanced curator matching algorithms
-- [ ] Personalized feed optimization
-- [ ] Curator reputation and credentialing system
-- [ ] Mobile app with offline content access
-- [ ] Additional network support (Arbitrum, Optimism)
-
-### Phase 3: Ecosystem Growth (Q3 2024)
-- [ ] Enterprise dashboard for business users
-- [ ] Third-party curator API marketplace
-- [ ] Community-driven content validation
-- [ ] Advanced analytics and insights
-- [ ] Creator monetization tools
-
-### Phase 4: Scale & Optimize (Q4 2024)
-- [ ] AI-powered content recommendation enhancement
-- [ ] Global content delivery optimization
-- [ ] Institutional features and compliance
-- [ ] Cross-platform integration (browser extensions, mobile widgets)
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -457,24 +351,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🆘 Support
 
 ### Community
-
-- **Discord**: [Join our community](https://discord.gg/cosurf)
-- **Twitter**: [@CosurfApp](https://twitter.com/cosurfapp)
-- **Telegram**: [Developer Chat](https://t.me/cosurfdev)
-
-### Technical Support
-
-- **Documentation**: [Full docs](https://docs.cosurf.com)
-- **API Reference**: [OpenAPI spec](https://api.cosurf.com/docs)
-- **Issues**: [GitHub Issues](https://github.com/your-org/cosurf/issues)
-
-### Contact
-
-- **Email**: developers@cosurf.com
-- **Security**: security@cosurf.com
-- **Business**: partnerships@cosurf.com
-
----
 
 **Cosurf: The end of information overload.**
 
