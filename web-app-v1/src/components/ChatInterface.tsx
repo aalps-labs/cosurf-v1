@@ -227,7 +227,7 @@ export default function ChatInterface({
       {/* Messages Area */}
       <div 
         ref={messagesContainerRef}
-        className={`flex-1 overflow-y-auto px-6 pt-8 pb-4 max-h-[72vh] relative ${
+        className={`flex-1 overflow-y-auto px-6 pt-8 pb-4 relative ${
           showHistoryPopup ? 'after:absolute after:inset-0 after:bg-black/10 after:backdrop-blur-sm after:z-30' : ''
         }`}
       >

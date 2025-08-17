@@ -43,7 +43,7 @@ export default function ChannelInterface({
   };
 
   return (
-    <div className={`flex-1 p-8 flex flex-col space-y-6 ${className}`}>
+    <div className={`flex-1 p-8 flex flex-col space-y-6 min-h-[76vh] max-h-[76vh] overflow-y-auto ${className}`}>
       {/* Chat Input Section */}
       {channelInfo && !loading && (
         <motion.div

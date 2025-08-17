@@ -556,7 +556,7 @@ const RecentlyAsked: React.FC<RecentlyAskedProps> = ({ channelId }) => {
     >
       <div className="h-full bg-gradient-to-br from-gray-50 to-blue-50/30 border border-gray-200/60 rounded-xl shadow-sm backdrop-blur-sm flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200/40">
+        <div className="flex items-center justify-between px-6 pt-3 pb-4 border-b border-gray-200/40">
           <div className="flex items-center space-x-3">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg blur-sm opacity-20" />

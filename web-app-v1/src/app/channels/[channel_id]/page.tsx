@@ -108,7 +108,7 @@ function ChannelContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+    <div className="flex-1 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
@@ -116,18 +116,18 @@ function ChannelContent() {
         <div className="absolute top-40 left-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-4000"></div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-8 py-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-8 py-4 h-full flex flex-col">
         
         {/* Main Layout Container - Ultra Clean */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_4px_rgba(0,0,0,0.05),0_12px_24px_rgba(0,0,0,0.05)]"
+          className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_4px_rgba(0,0,0,0.05),0_12px_24px_rgba(0,0,0,0.05)] flex-1 flex flex-col"
         >
           
           {/* Main Content Layout */}
-          <div className="flex min-h-[75vh]">
+          <div className="flex flex-1">
             
             {/* Main Dashboard Area */}
             <div className="flex-1 flex flex-col">
@@ -523,7 +523,7 @@ export default function ChannelProfilePage() {
     <AuthProvider>
       <DataProvider>
         <LoginTriggerProvider>
-          <div className="min-h-screen bg-gray-50">
+          <div className="h-screen bg-gray-50 flex flex-col">
             <Header />
             <ChannelContent />
           </div>
