@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion';
 import ChatInput from './ChatInput';
 import ChannelDescription from './ChannelDescription';
-import RecentlyAsked from './RecentlyAsked';
+import OtherChats from './OtherChats';
+import CollabChannels from './CollabChannels';
 
 interface ChannelInfo {
   id: string;
@@ -77,24 +78,24 @@ export default function ChannelInterface({
           transition={{ duration: 0.6, delay: 0.6 }}
           className="h-[32rem] flex space-x-6"
         >
-          {/* Left Half - Recently Asked */}
+          {/* Left Half - Other Chats */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.8 }}
             className="flex-1"
           >
-            <RecentlyAsked channelId={channelId} />
+            <OtherChats channelId={channelId} />
           </motion.div>
 
-          {/* Right Half - Empty Placeholder */}
+          {/* Right Half - Collab Channels */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 1.0 }}
             className="flex-1"
           >
-            {/* Empty div for future content */}
+            <CollabChannels channelId={channelId} />
           </motion.div>
         </motion.div>
       )}
