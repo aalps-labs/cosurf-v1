@@ -179,7 +179,7 @@ function ChannelContent() {
   };
 
   return (
-    <div className="flex-1 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+    <div className="flex-1 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden h-full">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
@@ -194,14 +194,14 @@ function ChannelContent() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_4px_rgba(0,0,0,0.05),0_12px_24px_rgba(0,0,0,0.05)] flex-1 flex flex-col"
+          className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_4px_rgba(0,0,0,0.05),0_12px_24px_rgba(0,0,0,0.05)] flex-1 flex flex-col min-h-0"
         >
           
           {/* Main Content Layout */}
-          <div className="flex flex-1">
+          <div className="flex flex-1 min-h-0">
             
             {/* Main Dashboard Area */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-h-0">
               
               {/* TITLE AREA - Ultra-Thin One-Line Layout */}
               <motion.div
@@ -427,19 +427,22 @@ function ChannelContent() {
               </motion.div>
               
               {/* MAIN AREA - Dynamic Content Based on Current View */}
-              {currentView === 'channel' ? (
-                <ChannelInterface
-                  channelId={channelId}
-                  channelInfo={channelInfo}
-                  loading={loading}
-                  onChatMessage={handleChatMessage}
-                />
-              ) : (
-                <ChatInterface
-                  channelId={channelId}
-                  channelName={channelInfo?.name}
-                />
-              )}
+              <div className="flex-1 min-h-0">
+                {currentView === 'channel' ? (
+                  <ChannelInterface
+                    channelId={channelId}
+                    channelInfo={channelInfo}
+                    loading={loading}
+                    onChatMessage={handleChatMessage}
+                  />
+                ) : (
+                  <ChatInterface
+                    channelId={channelId}
+                    channelName={channelInfo?.name}
+                    className="h-full"
+                  />
+                )}
+              </div>
             </div>
 
             {/* Minimal Vertical Divider */}
