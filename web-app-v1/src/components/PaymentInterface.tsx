@@ -2,13 +2,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X402PaymentClient } from '../lib/x402-client';
+import { useX402Client } from '../lib/x402-client';
+import { usePrivy } from '@privy-io/react-auth';
 // Note: useFacilitator from x402/verify is only available in Coinbase workspace
 // Using direct API approach until packages are publicly released
 
 interface PaymentResult {
-  data: any;
-  paymentResponse?: any;
+  data: unknown;
+  paymentResponse?: unknown;
   status: number;
   cost?: string;
 }
@@ -18,7 +19,7 @@ interface BazaarService {
   type: string;
   x402Version: number;
   lastUpdated: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   accepts: Array<{
     asset: string;
     description: string;
@@ -35,7 +36,7 @@ interface BazaarService {
         method: string;
         type: string;
       };
-      output: any;
+      output: unknown;
     };
     payTo: string;
     resource: string;
@@ -44,7 +45,19 @@ interface BazaarService {
 }
 
 export default function PaymentInterface() {
-  const [client] = useState(() => new X402PaymentClient());
+  // Privy integration
+  const { authenticated, login, logout } = usePrivy();
+  
+  // x402 client with Privy wallet integration
+  const { 
+    client, 
+    makePaymentRequest, 
+    isLoading: clientLoading, 
+    error: clientError, 
+    isReady, 
+    walletAddress,
+  } = useX402Client();
+  
   const [loading, setLoading] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, PaymentResult>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -52,7 +65,18 @@ export default function PaymentInterface() {
   const [bazaarLoading, setBazaarLoading] = useState(false);
   const [bazaarError, setBazaarError] = useState<string>('');
 
-  const makeRequest = async (endpoint: string, method: string = 'GET', data?: any) => {
+  const makeRequest = async (endpoint: string, method: string = 'GET', data?: unknown) => {
+    // Check if wallet is connected and client is ready
+    if (!authenticated) {
+      setErrors(prev => ({ ...prev, [`${method}-${endpoint}`]: 'Please connect your wallet first to make payments.' }));
+      return;
+    }
+
+    if (!isReady || !client) {
+      setErrors(prev => ({ ...prev, [`${method}-${endpoint}`]: 'Wallet not ready. Please ensure your wallet is connected and try again.' }));
+      return;
+    }
+
     const key = `${method}-${endpoint}`;
     setLoading(key);
     
@@ -70,7 +94,7 @@ export default function PaymentInterface() {
     });
 
     try {
-      const result = await client.makePaymentRequest(endpoint, {
+      const result = await makePaymentRequest(endpoint, {
         method,
         data
       });
@@ -83,10 +107,16 @@ export default function PaymentInterface() {
         }
       }));
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Don't show 402 errors as they are part of the normal x402 payment flow
-      if (error.response?.status !== 402) {
-        const errorMessage = error.response?.data?.error || error.message || 'Unknown error occurred';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: { error?: string } } };
+        if (axiosError.response?.status !== 402) {
+          const errorMessage = axiosError.response?.data?.error || (error as Error).message || 'Unknown error occurred';
+          setErrors(prev => ({ ...prev, [key]: errorMessage }));
+        }
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         setErrors(prev => ({ ...prev, [key]: errorMessage }));
       }
     } finally {
@@ -144,18 +174,19 @@ export default function PaymentInterface() {
       const maxPrice = 100000; // $0.10 in atomic units (USDC has 6 decimals)
       
       const allServices = data.items || [];
-      const affordableServices = allServices.filter((item: BazaarService) => 
-        item.accepts.find(paymentRequirements => 
-          paymentRequirements.asset === usdcAsset && 
-          Number(paymentRequirements.maxAmountRequired) < maxPrice
-        )
-      );
+      // Uncomment below if you want to filter by price
+      // const affordableServices = allServices.filter((item: BazaarService) => 
+      //   item.accepts.find(paymentRequirements => 
+      //     paymentRequirements.asset === usdcAsset && 
+      //     Number(paymentRequirements.maxAmountRequired) < maxPrice
+      //   )
+      // );
       
       // Set all services for demo (can switch to affordableServices if needed)
       setBazaarServices(allServices);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to discover services:', error);
-      setBazaarError(error.message || 'Failed to discover services');
+      setBazaarError(error instanceof Error ? error.message : 'Failed to discover services');
     } finally {
       setBazaarLoading(false);
     }
@@ -191,7 +222,11 @@ export default function PaymentInterface() {
     });
 
     try {
-      const result = await client.makePaymentRequest(acceptedPayment.resource, {
+      if (!authenticated || !isReady || !client) {
+        throw new Error('Wallet not connected or ready');
+      }
+
+      const result = await makePaymentRequest(acceptedPayment.resource, {
         method: acceptedPayment.outputSchema.input.method || 'GET'
       });
 
@@ -203,9 +238,15 @@ export default function PaymentInterface() {
         }
       }));
 
-    } catch (error: any) {
-      if (error.response?.status !== 402) {
-        const errorMessage = error.response?.data?.error || error.message || 'Unknown error occurred';
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: { error?: string } } };
+        if (axiosError.response?.status !== 402) {
+          const errorMessage = axiosError.response?.data?.error || (error as Error).message || 'Unknown error occurred';
+          setErrors(prev => ({ ...prev, [key]: errorMessage }));
+        }
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         setErrors(prev => ({ ...prev, [key]: errorMessage }));
       }
     } finally {
@@ -220,12 +261,59 @@ export default function PaymentInterface() {
           x402 Payment Demo
         </h1>
         <p className="text-gray-600">
-          Click buttons below to access premium APIs with instant USDC payments
+          Connect your wallet and access premium APIs with instant USDC payments
         </p>
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-700">
-            <strong>Wallet:</strong> {client.getAccount().address}
-          </p>
+        
+        {/* Wallet Connection Status */}
+        <div className="mt-4 p-4 rounded-lg">
+          {!authenticated ? (
+            <div className="bg-yellow-50 border border-yellow-200">
+              <div className="flex items-center justify-center space-x-4">
+                <p className="text-sm text-yellow-700">
+                  Connect your wallet to start making payments
+                </p>
+                <button
+                  onClick={login}
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded transition-colors"
+                >
+                  Connect Wallet
+                </button>
+              </div>
+            </div>
+          ) : !isReady ? (
+            <div className="bg-orange-50 border border-orange-200">
+              <div className="flex items-center justify-center space-x-4">
+                <p className="text-sm text-orange-700">
+                  Wallet connected, initializing payments...
+                </p>
+                {clientLoading && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-green-50 border border-green-200">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-green-700">
+                  <strong>Wallet Connected:</strong> {walletAddress}
+                  <br />
+                  <strong>Payment Status:</strong> Ready for x402 payments
+                </p>
+                <button
+                  onClick={logout}
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded text-sm transition-colors"
+                >
+                  Disconnect
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {clientError && (
+            <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+              Client Error: {clientError}
+            </div>
+          )}
         </div>
       </div>
 
@@ -252,7 +340,7 @@ export default function PaymentInterface() {
         )}
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-          {bazaarServices.map((service, index) => {
+          {bazaarServices.map((service) => {
             const payment = service.accepts[0];
             const key = `BAZAAR-${service.resource}`;
             
@@ -285,8 +373,8 @@ export default function PaymentInterface() {
 
                 <button
                   onClick={() => callBazaarService(service)}
-                  disabled={isLoading(key) || !payment}
-                  className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-purple-300 text-white font-medium py-2 px-3 rounded text-sm transition-colors"
+                  disabled={!authenticated || !isReady || isLoading(key) || !payment}
+                  className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 text-white font-medium py-2 px-3 rounded text-sm transition-colors"
                 >
                   {isLoading(key) ? 'Calling...' : 'Try Service'}
                 </button>
@@ -297,7 +385,7 @@ export default function PaymentInterface() {
 
         {bazaarServices.length === 0 && !bazaarLoading && !bazaarError && (
           <div className="text-center text-gray-500 py-8">
-            No services discovered yet. Click "Refresh Services" to discover available x402 services.
+            No services discovered yet. Click &quot;Refresh Services&quot; to discover available x402 services.
           </div>
         )}
       </div>
@@ -315,16 +403,16 @@ export default function PaymentInterface() {
           <div className="space-y-2">
             <button
               onClick={() => makeRequest('/api/premium', 'GET')}
-              disabled={isLoading('GET-/api/premium')}
-              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded transition-colors"
+              disabled={!authenticated || !isReady || isLoading('GET-/api/premium')}
+              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded transition-colors"
             >
               {isLoading('GET-/api/premium') ? 'Processing...' : 'Get Premium Data'}
             </button>
             
             <button
               onClick={() => makeRequest('/api/premium', 'POST', { query: 'market analysis' })}
-              disabled={isLoading('POST-/api/premium')}
-              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded transition-colors"
+              disabled={!authenticated || !isReady || isLoading('POST-/api/premium')}
+              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded transition-colors"
             >
               {isLoading('POST-/api/premium') ? 'Processing...' : 'Submit Premium Query'}
             </button>
@@ -341,8 +429,8 @@ export default function PaymentInterface() {
           
           <button
             onClick={() => makeRequest('/api/analytics', 'GET')}
-            disabled={isLoading('GET-/api/analytics')}
-            className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-purple-300 text-white font-medium py-2 px-4 rounded transition-colors"
+            disabled={!authenticated || !isReady || isLoading('GET-/api/analytics')}
+            className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded transition-colors"
           >
             {isLoading('GET-/api/analytics') ? 'Processing...' : 'Get Analytics'}
           </button>
@@ -358,8 +446,8 @@ export default function PaymentInterface() {
           
           <button
             onClick={() => makeRequest('/api/ai-insights', 'GET')}
-            disabled={isLoading('GET-/api/ai-insights')}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white font-medium py-2 px-4 rounded transition-colors"
+            disabled={!authenticated || !isReady || isLoading('GET-/api/ai-insights')}
+            className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded transition-colors"
           >
             {isLoading('GET-/api/ai-insights') ? 'Processing...' : 'Get AI Insights'}
           </button>
@@ -400,7 +488,7 @@ export default function PaymentInterface() {
         ))}
 
         {Object.entries(errors)
-          .filter(([key, error]) => error && error.trim() !== '')
+          .filter(([, error]) => error && error.trim() !== '')
           .map(([key, error]) => (
             <div key={key} className="border border-red-200 rounded-lg p-6 bg-red-50">
               <h3 className="text-lg font-semibold text-red-800 mb-2">

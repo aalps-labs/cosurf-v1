@@ -4,7 +4,6 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { buildApiUrl, makeApiRequest } from '@/lib/api-config';
-import AuthProvider from '../../../components/auth/AuthProvider';
 import DataProvider from '../../../components/auth/DataProvider';
 import LoginTriggerProvider from '../../../components/auth/LoginTriggerContext';
 import Header from '../../../components/Header';
@@ -435,15 +434,13 @@ function ChannelContent() {
 
 export default function ChannelProfilePage() {
   return (
-    <AuthProvider>
-      <DataProvider>
-        <LoginTriggerProvider>
-          <div className="min-h-screen bg-gray-50">
-            <Header />
-            <ChannelContent />
-          </div>
-        </LoginTriggerProvider>
-      </DataProvider>
-    </AuthProvider>
+    <DataProvider>
+      <LoginTriggerProvider>
+        <div className="min-h-screen bg-gray-50">
+          <Header />
+          <ChannelContent />
+        </div>
+      </LoginTriggerProvider>
+    </DataProvider>
   );
 }
