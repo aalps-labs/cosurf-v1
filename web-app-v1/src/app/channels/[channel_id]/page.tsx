@@ -14,6 +14,7 @@ import FolderTree from '../../../components/FolderTree';
 import ChannelDescription from '../../../components/ChannelDescription';
 import RecentlyAsked from '../../../components/RecentlyAsked';
 import VersionTimeline from '../../../components/VersionTimeline';
+import ChatInput from '../../../components/ChatInput';
 import { useChannelData } from '../../../hooks/useChannelData';
 import type { Document } from '../../../components/FolderTree';
 
@@ -268,6 +269,23 @@ function ChannelContent() {
               
               {/* MAIN AREA - Split Layout */}
               <div className="flex-1 p-8 flex flex-col space-y-6">
+                {/* Chat Input Section */}
+                {channelInfo && !loading && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                  >
+                    <ChatInput 
+                      placeholder={`Ask anything about ${channelInfo.name}...`}
+                      onSend={(message) => {
+                        console.log('Chat message:', message);
+                        // TODO: Implement chat logic
+                      }}
+                    />
+                  </motion.div>
+                )}
+
                 {/* Top Section - Channel Description */}
                 {channelInfo?.description && !loading && (
                   <motion.div
