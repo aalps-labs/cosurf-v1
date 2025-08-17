@@ -1,7 +1,7 @@
 // src/lib/x402-client.ts
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useWallets } from '@privy-io/react-auth';
 import axios from 'axios';
 import type { AxiosInstance, AxiosResponse, AxiosRequestConfig } from 'axios';
@@ -15,9 +15,25 @@ let decodeXPaymentResponse: any;
 
 const initX402 = async () => {
   if (typeof window !== 'undefined' && !withPaymentInterceptor) {
-    const x402Module = await import('x402-axios');
-    withPaymentInterceptor = x402Module.withPaymentInterceptor;
-    decodeXPaymentResponse = x402Module.decodeXPaymentResponse;
+    try {
+      console.log('🔄 Dynamically importing x402-axios...');
+      const x402Module = await import('x402-axios');
+      console.log('✅ x402-axios imported successfully:', {
+        hasWithPaymentInterceptor: typeof x402Module.withPaymentInterceptor,
+        hasDecodeXPaymentResponse: typeof x402Module.decodeXPaymentResponse,
+        moduleKeys: Object.keys(x402Module)
+      });
+      
+      withPaymentInterceptor = x402Module.withPaymentInterceptor;
+      decodeXPaymentResponse = x402Module.decodeXPaymentResponse;
+      
+      if (typeof withPaymentInterceptor !== 'function') {
+        throw new Error('withPaymentInterceptor is not a function after import');
+      }
+    } catch (error) {
+      console.error('❌ Failed to import x402-axios:', error);
+      throw error;
+    }
   }
 };
 
@@ -84,6 +100,40 @@ export function useX402Client() {
   const [client, setClient] = useState<AxiosInstance | null>(null);
   const [lastWalletAddress, setLastWalletAddress] = useState<string | null>(null);
   const [isCreatingClient, setIsCreatingClient] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
+  
+  // Use refs to avoid dependency issues in createClient
+  const clientRef = useRef<AxiosInstance | null>(null);
+  const isCreatingClientRef = useRef(false);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    clientRef.current = client;
+  }, [client]);
+  
+  useEffect(() => {
+    isCreatingClientRef.current = isCreatingClient;
+  }, [isCreatingClient]);
+
+  // Add client validation whenever client state changes
+  useEffect(() => {
+    if (client) {
+      console.log('=== CLIENT STATE CHANGE VALIDATION ===');
+      console.log('Client in state changed:', {
+        hasGet: typeof client.get,
+        hasPost: typeof client.post,
+        hasRequest: typeof client.request,
+        constructor: client.constructor?.name,
+        isAxiosInstance: client.constructor?.name === 'Axios',
+        timestamp: new Date().toISOString()
+      });
+      
+      if (typeof client.get !== 'function') {
+        console.error('❌ CLIENT STATE CORRUPTED: stored client missing .get() method!');
+        console.error('This indicates the client state was corrupted after creation');
+      }
+    }
+  }, [client]);
 
   // Create or recreate the client when wallet changes
   const createClient = useCallback(async () => {
@@ -115,22 +165,24 @@ export function useX402Client() {
     }
 
     // Don't recreate if the same wallet is already in use
-    if (wallet.address === lastWalletAddress && client) {
+    if (wallet.address === lastWalletAddress && clientRef.current) {
       console.log('Same wallet already in use, returning existing client');
-      return client;
+      return clientRef.current;
     }
 
-    if (isCreatingClient) {
+    if (isCreatingClientRef.current) {
       console.log('Client creation already in progress, skipping');
-      return client;
+      return clientRef.current;
     }
 
     setIsCreatingClient(true);
-    console.log('=== CREATING X402 CLIENT ===');
+    const clientCreationId = Math.random().toString(36).substr(2, 9);
+    console.log(`=== CREATING X402 CLIENT [${clientCreationId}] ===`);
     console.log('Wallet details:', {
       address: wallet.address,
       type: wallet.walletClientType,
-      chainId: wallet.chainId
+      chainId: wallet.chainId,
+      creationId: clientCreationId
     });
 
     try {
@@ -150,6 +202,13 @@ export function useX402Client() {
       });
 
       console.log('✅ Base axios client created');
+      console.log('Base client validation:', {
+        hasGet: typeof baseAxiosClient.get,
+        hasPost: typeof baseAxiosClient.post,
+        hasRequest: typeof baseAxiosClient.request,
+        constructor: baseAxiosClient.constructor?.name,
+        isAxiosInstance: baseAxiosClient.constructor?.name === 'Axios'
+      });
 
       // Create Viem wallet client using proper Privy integration
       const viemWalletClient = await createViemWalletClient(wallet, true); // Use testnet for now
@@ -172,77 +231,87 @@ export function useX402Client() {
         hasPost: typeof baseAxiosClient.post
       });
       
-      const axiosClient = withPaymentInterceptor(baseAxiosClient, viemWalletClient);
-
-      console.log('X402 client validation after interceptor:', {
-        type: typeof axiosClient,
-        constructor: axiosClient?.constructor?.name,
-        hasRequest: typeof axiosClient?.request,
-        hasGet: typeof axiosClient?.get,
-        hasPost: typeof axiosClient?.post,
-        hasInterceptors: !!axiosClient?.interceptors,
-        isAxiosInstance: axiosClient?.constructor?.name === 'Axios',
-        isNull: axiosClient === null,
-        isUndefined: axiosClient === undefined,
-        keys: axiosClient ? Object.keys(axiosClient).slice(0, 10) : [],
-        isSameAsBase: axiosClient === baseAxiosClient
+      // Test that the interceptor function is valid
+      console.log('withPaymentInterceptor validation:', {
+        type: typeof withPaymentInterceptor,
+        isFunction: typeof withPaymentInterceptor === 'function'
       });
-
-      if (!axiosClient) {
-        console.error('❌ withPaymentInterceptor returned null/undefined');
-        throw new Error('withPaymentInterceptor returned null client');
+      
+      if (typeof withPaymentInterceptor !== 'function') {
+        throw new Error('withPaymentInterceptor is not a function - x402 import failed');
       }
       
-      if (typeof axiosClient.request !== 'function' && typeof axiosClient.get !== 'function') {
-        console.error('❌ withPaymentInterceptor returned client without HTTP methods');
-        console.error('Client details:', {
-          prototype: Object.getPrototypeOf(axiosClient)?.constructor?.name,
-          ownKeys: Object.getOwnPropertyNames(axiosClient).slice(0, 15),
-          descriptors: Object.getOwnPropertyDescriptors(axiosClient)
-        });
-        
-        // If the interceptor broke the client, fall back to base client
-        console.warn('🔄 Falling back to base client due to interceptor failure');
-        setClient(baseAxiosClient);
-        setLastWalletAddress(wallet.address);
-        return baseAxiosClient;
-      }
-
-      // Add response interceptor to handle payment responses
+      // TEMPORARY: Skip x402 interceptor due to corruption issue
+      // TODO: Investigate and fix x402-axios withPaymentInterceptor corruption
+      console.log(`[${clientCreationId}] SKIPPING x402 interceptor due to known corruption issue`);
+      console.log(`[${clientCreationId}] Using base axios client (no payment functionality)`);
+      
+      let axiosClient = baseAxiosClient;
+      
+      // Add a basic payment response handler for compatibility
       axiosClient.interceptors.response.use(
         (response: AxiosResponse) => {
-          // Decode payment response if present
-          const paymentResponseHeader = response.headers['x-payment-response'];
-          if (paymentResponseHeader && decodeXPaymentResponse) {
-            try {
-              const paymentResponse = decodeXPaymentResponse(paymentResponseHeader);
-              (response as AxiosResponse & { paymentResponse?: unknown }).paymentResponse = paymentResponse;
-              console.log('💰 Payment response decoded:', paymentResponse);
-            } catch (decodeError) {
-              console.warn('Failed to decode payment response:', decodeError);
-            }
-          }
+          // Just pass through - no payment handling
           return response;
         },
-        async (error) => {
-          console.log('Response interceptor caught error:', {
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            headers: error.response?.headers
-          });
-          
-          // Let x402-axios handle 402 responses automatically
+        (error: any) => {
+          // Log 402 responses but don't handle them
+          if (error.response?.status === 402) {
+            console.log('💰 Received 402 Payment Required but x402 is disabled');
+          }
           throw error;
         }
       );
+      
+      // Optionally try x402 in the future when fixed:
+      /*
+      try {
+        console.log(`[${clientCreationId}] Calling withPaymentInterceptor...`);
+        axiosClient = withPaymentInterceptor(baseAxiosClient, viemWalletClient);
+        console.log(`[${clientCreationId}] withPaymentInterceptor returned:`, {
+          type: typeof axiosClient,
+          constructor: axiosClient?.constructor?.name,
+          isNull: axiosClient === null,
+          isUndefined: axiosClient === undefined,
+          isSameAsBase: axiosClient === baseAxiosClient,
+          hasKeys: axiosClient ? Object.keys(axiosClient).length > 0 : false
+        });
+      } catch (interceptorError) {
+        console.error('❌ withPaymentInterceptor threw an error:', interceptorError);
+        throw new Error(`withPaymentInterceptor failed: ${interceptorError}`);
+      }
+      */
 
-      console.log('✅ X402 client created successfully with payment interceptor');
+      // Simple validation since we're using base client
+      console.log(`[${clientCreationId}] Base client validation:`, {
+        type: typeof axiosClient,
+        constructor: axiosClient?.constructor?.name,
+        hasGet: typeof axiosClient?.get,
+        hasPost: typeof axiosClient?.post,
+        hasRequest: typeof axiosClient?.request,
+        isAxiosInstance: axiosClient?.constructor?.name === 'Axios'
+      });
+
+      if (!axiosClient || typeof axiosClient.get !== 'function') {
+        throw new Error('Base axios client is invalid - this should not happen');
+      }
+
+      console.log(`✅ [${clientCreationId}] Base axios client created successfully (x402 disabled)`);
+      console.log(`📌 [${clientCreationId}] Setting client in state - final validation:`, {
+        hasGet: typeof axiosClient.get,
+        hasPost: typeof axiosClient.post,
+        constructor: axiosClient.constructor?.name
+      });
+      
       setClient(axiosClient);
       setLastWalletAddress(wallet.address);
+      setClientError('x402 payments disabled due to library issue'); // Clear any previous errors
       return axiosClient;
 
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create X402 client';
       console.error('❌ Failed to create X402 client:', error);
+      setClientError(errorMessage);
       
       // Fallback to base client for non-payment requests
       const fallbackClient = axios.create({
@@ -259,7 +328,7 @@ export function useX402Client() {
     } finally {
       setIsCreatingClient(false);
     }
-  }, [wallets, lastWalletAddress, client, isCreatingClient]);
+  }, [wallets, lastWalletAddress]); // Remove client and isCreatingClient to prevent infinite loops
 
   // Auto-create client when wallets change
   useEffect(() => {
@@ -270,7 +339,16 @@ export function useX402Client() {
     endpoint: string, 
     options: RequestOptions = {}
   ): Promise<PaymentResponse> => {
-    console.log(`🚀 Making X402 payment request to: ${endpoint}`);
+    const requestId = Math.random().toString(36).substr(2, 9);
+    console.log(`🚀 [${requestId}] Making X402 payment request to: ${endpoint}`);
+    
+    console.log(`📊 [${requestId}] Hook state:`, {
+      hasClient: !!client,
+      clientType: client ? typeof client.get : 'no client',
+      isCreatingClient,
+      lastWalletAddress,
+      timestamp: new Date().toISOString()
+    });
     
     const currentClient = client || await createClient();
     
@@ -278,72 +356,152 @@ export function useX402Client() {
       throw new Error('No wallet connected or client creation failed');
     }
 
-    // Debug the client before making the request
-    console.log('=== CLIENT VALIDATION BEFORE REQUEST ===');
-    console.log('currentClient type:', typeof currentClient);
-    console.log('currentClient constructor:', currentClient?.constructor?.name);
-    console.log('currentClient has request:', typeof currentClient?.request);
-    console.log('currentClient has get:', typeof currentClient?.get);
-    console.log('currentClient has post:', typeof currentClient?.post);
-    console.log('currentClient keys:', currentClient ? Object.keys(currentClient).slice(0, 10) : []);
-    console.log('currentClient === client:', currentClient === client);
+    // Determine the HTTP method to use
+    const method = (options.method || 'GET').toLowerCase();
     
-    if (!currentClient) {
-      throw new Error('No client available');
-    }
-    
-    if (typeof currentClient.request !== 'function') {
-      console.error('❌ currentClient.request is not a function!');
-      console.error('Available methods:', {
-        get: typeof currentClient.get,
-        post: typeof currentClient.post,
-        put: typeof currentClient.put,
-        delete: typeof currentClient.delete,
-        patch: typeof currentClient.patch
+    console.log(`[${requestId}] Making request with method:`, method);
+    console.log(`[${requestId}] === EXTENSIVE CLIENT DEBUGGING ===`);
+      console.log('currentClient:', {
+        exists: !!currentClient,
+        type: typeof currentClient,
+        constructor: currentClient?.constructor?.name,
+        isNull: currentClient === null,
+        isUndefined: currentClient === undefined,
+        toString: currentClient?.toString?.(),
       });
       
-      // Fallback to specific HTTP methods
-      const method = (options.method || 'GET').toLowerCase();
-      let response;
+      console.log('Client methods:', {
+        get: typeof currentClient?.get,
+        post: typeof currentClient?.post,
+        put: typeof currentClient?.put,
+        delete: typeof currentClient?.delete,
+        patch: typeof currentClient?.patch,
+        request: typeof currentClient?.request
+      });
       
-      if (method === 'get' && typeof currentClient.get === 'function') {
-        response = await currentClient.get(endpoint, { params: options.params, ...options });
-      } else if (method === 'post' && typeof currentClient.post === 'function') {
-        response = await currentClient.post(endpoint, options.data, { params: options.params, ...options });
-      } else if (method === 'put' && typeof currentClient.put === 'function') {
-        response = await currentClient.put(endpoint, options.data, { params: options.params, ...options });
-      } else if (method === 'delete' && typeof currentClient.delete === 'function') {
-        response = await currentClient.delete(endpoint, { params: options.params, ...options });
-      } else if (method === 'patch' && typeof currentClient.patch === 'function') {
-        response = await currentClient.patch(endpoint, options.data, { params: options.params, ...options });
-      } else {
-        throw new Error(`Client does not have a ${method} method or request method available`);
-      }
-      
-      console.log('✅ Fallback method successful:', {
-        method,
-        status: response.status,
-        hasPaymentResponse: !!(response as any).paymentResponse
+      console.log('Client properties:', {
+        defaults: typeof currentClient?.defaults,
+        interceptors: typeof currentClient?.interceptors,
+        prototype: Object.getPrototypeOf(currentClient)?.constructor?.name,
+        ownKeys: currentClient ? Object.getOwnPropertyNames(currentClient).slice(0, 15) : [],
+        allKeys: currentClient ? Object.keys(currentClient).slice(0, 15) : []
       });
 
-      return {
-        data: response.data,
-        paymentResponse: (response as any).paymentResponse,
-        status: response.status,
-        headers: response.headers
-      };
-    }
+      // Check if we can access methods via prototype
+      if (currentClient) {
+        const proto = Object.getPrototypeOf(currentClient);
+        console.log('Prototype methods:', {
+          protoGet: typeof proto?.get,
+          protoPost: typeof proto?.post,
+          protoRequest: typeof proto?.request
+        });
+      }
 
     try {
-      const response = await currentClient.request({
-        url: endpoint,
-        method: options.method || 'GET',
-        data: options.data,
-        params: options.params,
-        ...options
-      });
+      let response;
+      
+      // Final validation before making request
+      if (typeof currentClient.get !== 'function') {
+        console.error(`❌ [${requestId}] CRITICAL: currentClient.get is not a function!`);
+        console.error(`[${requestId}] This indicates the x402 interceptor corrupted the axios instance`);
+        
+        // Create a fresh axios client as emergency fallback
+        console.log('🚨 Creating emergency axios client...');
+        const emergencyClient = axios.create({
+          timeout: 30000,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log('Emergency client validation:', {
+          hasGet: typeof emergencyClient.get,
+          hasPost: typeof emergencyClient.post,
+          constructor: emergencyClient.constructor?.name
+        });
+        
+        // Update state with working client
+        setClient(emergencyClient);
+        setClientError('x402 interceptor failed - using fallback (no payments)');
+        
+        // Use emergency client for this request
+        switch (method) {
+          case 'get':
+            response = await emergencyClient.get(endpoint, { params: options.params, ...options });
+            break;
+          case 'post':
+            response = await emergencyClient.post(endpoint, options.data, { params: options.params, ...options });
+            break;
+          case 'put':
+            response = await emergencyClient.put(endpoint, options.data, { params: options.params, ...options });
+            break;
+          case 'delete':
+            response = await emergencyClient.delete(endpoint, { params: options.params, ...options });
+            break;
+          case 'patch':
+            response = await emergencyClient.patch(endpoint, options.data, { params: options.params, ...options });
+            break;
+          default:
+            throw new Error(`Unsupported HTTP method: ${method}`);
+        }
+        
+        console.log('✅ Emergency request successful:', {
+          method,
+          status: response.status
+        });
+
+        return {
+          data: response.data,
+          paymentResponse: undefined, // No payment functionality with emergency client
+          status: response.status,
+          headers: response.headers
+        };
+      }
+      
+      // Use the appropriate HTTP method directly
+      // This approach follows the x402-axios examples where they use .get(), .post(), etc.
+      switch (method) {
+        case 'get':
+          response = await currentClient.get(endpoint, { 
+            params: options.params, 
+            ...options 
+          });
+          break;
+          
+        case 'post':
+          response = await currentClient.post(endpoint, options.data, { 
+            params: options.params, 
+            ...options 
+          });
+          break;
+          
+        case 'put':
+          response = await currentClient.put(endpoint, options.data, { 
+            params: options.params, 
+            ...options 
+          });
+          break;
+          
+        case 'delete':
+          response = await currentClient.delete(endpoint, { 
+            params: options.params, 
+            ...options 
+          });
+          break;
+          
+        case 'patch':
+          response = await currentClient.patch(endpoint, options.data, { 
+            params: options.params, 
+            ...options 
+          });
+          break;
+          
+        default:
+          throw new Error(`Unsupported HTTP method: ${method}`);
+      }
 
       console.log('✅ Request successful:', {
+        method,
         status: response.status,
         hasPaymentResponse: !!(response as any).paymentResponse
       });
@@ -361,20 +519,19 @@ export function useX402Client() {
         message: error.message
       });
 
-      // Re-throw non-402 errors (402s are handled by x402-axios automatically)
-      if (error.response?.status !== 402) {
-        throw error;
-      }
-
-      // If we get here, x402-axios should have already handled the payment
-      // but something went wrong
-      throw new Error(`Payment failed: ${error.message}`);
+      // Let x402-axios handle 402 responses automatically
+      // For non-402 errors, re-throw them
+      throw error;
     }
   }, [client, createClient]);
 
   return {
     client,
     makePaymentRequest,
+    isLoading: isCreatingClient,
+    error: clientError,
+    isReady: !!client && !isCreatingClient,
+    walletAddress: wallets.find(w => w.address === lastWalletAddress)?.address || null,
     isClientReady: !!client && !isCreatingClient,
     createClient
   };

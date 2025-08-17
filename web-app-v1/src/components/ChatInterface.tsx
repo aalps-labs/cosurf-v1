@@ -138,11 +138,36 @@ export default function ChatInterface({
       // Step 1: Perform RAG search using documents API
       let enhancedPrompt = content;
       let documentReferences: any[] = [];
+      
+      // TEMPORARY TEST: Bypass RAG and use manual enhanced prompt
+      const useTestPrompt = false; // Set to true to test without RAG
+      if (useTestPrompt) {
+        enhancedPrompt = `Context: You have access to the following relevant content:
 
-      try {
-        console.log('🔍 CHAT INTERFACE: Starting RAG search for:', content);
-        
-        // Call documents RAG search API
+Source 1:
+Title: Test Document
+URL: https://example.com
+Type: WEB
+Content: This is test content about artificial intelligence and machine learning. It discusses various aspects of AI technology and its applications in modern software development.
+---
+
+Current User Question: ${content}
+
+Instructions:
+1. Use the provided context to answer the user's question
+2. Reference the sources when relevant with [1], [2], etc.
+3. Provide a clear, helpful response
+4. If the context is relevant, use it to enhance your answer
+
+Please answer the user's question using the context provided above.`;
+        console.log('🧪 CHAT INTERFACE: Using test enhanced prompt instead of RAG');
+      }
+
+      if (!useTestPrompt) {
+        try {
+          console.log('🔍 CHAT INTERFACE: Starting RAG search for:', content);
+          
+          // Call documents RAG search API
         const ragResponse = await fetch('/api/v1/documents/rag-search', {
           method: 'POST',
           headers: {
@@ -154,7 +179,7 @@ export default function ChatInterface({
             top_k: 15,
             similarity_threshold: 0.1,
             context_window: 2,
-            include_content: false,
+            include_content: true, // Changed to true to get chunk content
             include_source: true
           }),
           signal: abortControllerRef.current?.signal
@@ -163,6 +188,12 @@ export default function ChatInterface({
         if (ragResponse.ok) {
           const ragData = await ragResponse.json();
           console.log('✅ CHAT INTERFACE: RAG search successful, found', ragData.results?.length || 0, 'relevant chunks');
+          console.log('🔍 CHAT INTERFACE: RAG data structure:', JSON.stringify(ragData, null, 2));
+          console.log('🔍 CHAT INTERFACE: RAG data keys:', Object.keys(ragData));
+          console.log('🔍 CHAT INTERFACE: ragData.success:', ragData.success);
+          console.log('🔍 CHAT INTERFACE: ragData.results type:', typeof ragData.results);
+          console.log('🔍 CHAT INTERFACE: ragData.results length:', ragData.results?.length);
+          console.log('🔍 CHAT INTERFACE: ragData.results:', ragData.results);
 
           if (ragData.success && ragData.results && ragData.results.length > 0) {
             // Create chat history context (last 6 messages for context)
@@ -184,11 +215,20 @@ ${recentMessages.map(msg => `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${
               const similarity = Math.round(result.similarityScore * 100);
               const referenceNumber = index + 1;
               
-              // Get chunk text content (truncate if too long for prompt)
-              const chunkText = chunk?.text || 'No content available';
+              console.log(`🔍 CHAT INTERFACE: Processing chunk ${referenceNumber}:`, {
+                chunkKeys: chunk ? Object.keys(chunk) : 'null',
+                documentKeys: document ? Object.keys(document) : 'null',
+                chunkData: chunk,
+                documentData: document
+              });
+              
+              // Get chunk text content - try different possible property names
+              const chunkText = chunk?.text || chunk?.content || chunk?.chunk_text || 'No content available';
               const truncatedText = chunkText.length > 1500 
                 ? chunkText.substring(0, 1500) + '...' 
                 : chunkText;
+                
+              console.log(`📝 CHAT INTERFACE: Chunk ${referenceNumber} text length:`, chunkText.length, 'truncated:', truncatedText.length);
               
               return `
 Source ${referenceNumber}:
@@ -235,6 +275,8 @@ Example reference format:
             }));
 
             console.log('📚 CHAT INTERFACE: Prepared', documentReferences.length, 'document references');
+            console.log('📝 CHAT INTERFACE: Enhanced prompt length:', enhancedPrompt.length);
+            console.log('📝 CHAT INTERFACE: Enhanced prompt preview:', enhancedPrompt.substring(0, 500) + '...');
             
 
           } else {
@@ -279,6 +321,7 @@ Instructions:
 4. Format your response appropriately - use markdown when it improves clarity
 5. Keep responses focused and well-structured - avoid unnecessary verbosity unless specifically requested
 6. Be direct and practical - focus on answering the specific question asked`;
+        }
       }
 
       // Add references to assistant message if we have them
@@ -296,17 +339,23 @@ Instructions:
 
       // Step 2: Call streaming API with enhanced prompt
       console.log('🤖 CHAT INTERFACE: Calling streaming API with enhanced prompt');
+      console.log('🔍 CHAT INTERFACE: Enhanced prompt being sent to /api/chat:', enhancedPrompt);
+      
+      const chatRequestBody = {
+        prompt: enhancedPrompt,
+        model: selectedModel,
+        temperature: 0.7,
+        stream: true
+      };
+      
+      console.log('📤 CHAT INTERFACE: Full request body:', JSON.stringify(chatRequestBody, null, 2));
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          prompt: enhancedPrompt,
-          model: selectedModel,
-          temperature: 0.7,
-          stream: true
-        }),
+        body: JSON.stringify(chatRequestBody),
         signal: abortControllerRef.current?.signal
       });
 

@@ -180,6 +180,16 @@ export async function POST(req: Request) {
       stream = true // Default to streaming for backward compatibility
     }: ChatRequest = await req.json();
 
+    console.log('🤖 CHAT API: Received request:', {
+      promptLength: prompt?.length || 0,
+      promptPreview: prompt?.substring(0, 200) + '...',
+      model,
+      provider,
+      maxTokens,
+      temperature,
+      stream
+    });
+
     if (!prompt) {
       return new NextResponse(JSON.stringify({ error: 'Prompt is required' }), { 
         status: 400,
