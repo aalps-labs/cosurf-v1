@@ -149,9 +149,14 @@ export default function Header() {
                   S
                 </motion.div>
               </motion.div>
-              <span className="text-xl font-bold bg-gradient-to-r from-gray-900 via-indigo-600 to-purple-600 bg-clip-text text-transparent group-hover:from-indigo-600 group-hover:to-purple-600 transition-all duration-300">
-                Surf
-              </span>
+              <div className="flex flex-col">
+                <span className="text-xl font-bold bg-gradient-to-r from-gray-900 via-indigo-600 to-purple-600 bg-clip-text text-transparent group-hover:from-indigo-600 group-hover:to-purple-600 transition-all duration-300">
+                  Cosurf
+                </span>
+                <span className="text-xs text-gray-500 font-medium">
+                  Surf the Internet differently, Secured with Crypto
+                </span>
+              </div>
             </Link>
 
             {/* Desktop Navigation */}
